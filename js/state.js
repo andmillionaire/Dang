@@ -4,6 +4,7 @@ const KEY = 'dang-cabin-v1';
 
 const fresh = () => ({
   v: 2,
+  hero: null, // set by the character creator
   coins: 0,
   shards: 0,
   maxLevel: 1,

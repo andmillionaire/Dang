@@ -1,9 +1,10 @@
-import { $, h, icon } from './ui.js';
-import { sleep } from './pixel.js';
+import { h, icon } from '../ui.js';
+import { sleep } from '../pixel.js';
+import { mount, banner } from './common.js';
 
 const LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
 
-function outcome(b) {
+export function outcome(b) {
   for (const l of LINES) if (b[l[0]] && b[l[0]] === b[l[1]] && b[l[1]] === b[l[2]]) return { w: b[l[0]], line: l };
   return b.every(Boolean) ? { w: 'draw' } : null;
 }
@@ -23,7 +24,7 @@ function minimax(b, turn, depth) {
   return best;
 }
 
-function aiMove(b, skill) {
+export function aiMove(b, skill) {
   const empty = b.map((v, i) => (v ? -1 : i)).filter(i => i >= 0);
   if (Math.random() > skill) return empty[(Math.random() * empty.length) | 0];
   let best = -Infinity, picks = [];
@@ -36,20 +37,19 @@ function aiMove(b, skill) {
   return picks[(Math.random() * picks.length) | 0];
 }
 
-// Resolves 'win' | 'lose' | 'draw'. Ties replay, up to MAX_TIES times.
 const MAX_TIES = 2;
 
-export function playTicTacToe({ skill, sfx }) {
-  const root = $('#ttt');
-  const grid = $('#tttGrid');
-  const status = $('#tttStatus');
-  const rounds = $('#tttRound');
-  root.hidden = false;
-  root.classList.remove('leaving');
+// Resolves 'win' | 'lose' | 'draw'. Ties replay up to MAX_TIES times.
+export function play(root, { difficulty, sfx }) {
+  const skill = 0.35 + 0.5 * difficulty;
+  const ui = mount(root, { title: 'Tic-Tac-Toe', tip: 'Get three warm X’s in a row before the storm does.' });
+  const grid = h('div', { class: 'ttt-grid' });
+  ui.body.append(grid);
+  ui.info.textContent = `The storm is ${Math.round(skill * 100)}% focused`;
 
   return new Promise(resolve => {
     let board, locked, ties = 0;
-    const cells = Array.from({ length: 9 }, (_, i) => h('button', { class: 'ttt-cell', 'aria-label': `Cell ${i + 1}`, onclick: () => play(i) }));
+    const cells = Array.from({ length: 9 }, (_, i) => h('button', { class: 'ttt-cell', 'aria-label': `Cell ${i + 1}`, onclick: () => move(i) }));
     grid.replaceChildren(...cells);
 
     function render(line) {
@@ -64,56 +64,51 @@ export function playTicTacToe({ skill, sfx }) {
     function newRound() {
       board = Array(9).fill(null);
       locked = false;
-      status.textContent = 'Your move: you are the warm X';
-      rounds.textContent = ties ? `Tie-breaker ${ties}/${MAX_TIES}` : '';
+      ui.status(ties ? `Tie-breaker ${ties}/${MAX_TIES}. Your move` : 'Your move');
       render();
     }
 
     async function finish(res, msg, line) {
       locked = true;
-      status.textContent = msg;
       render(line);
       sfx(res === 'win' ? 'tttwin' : 'tttlose');
-      await sleep(1300);
-      root.classList.add('leaving');
-      await sleep(250);
-      root.hidden = true;
+      await sleep(700);
+      await banner(ui, res, msg);
       resolve(res);
     }
 
     async function check() {
       const o = outcome(board);
       if (!o) return false;
-      if (o.w === 'X') finish('win', 'You beat the storm! Blast away!', o.line);
-      else if (o.w === 'O') finish('lose', 'The storm wins. Your match fizzles…', o.line);
-      else if (ties >= MAX_TIES) finish('draw', 'Stalemate. The charge fizzles…');
+      if (o.w === 'X') finish('win', 'You beat the storm!', o.line);
+      else if (o.w === 'O') finish('lose', 'The storm got three in a row.', o.line);
+      else if (ties >= MAX_TIES) finish('draw', 'Stalemate.');
       else {
         ties++;
         locked = true;
-        status.textContent = 'Tie! Again!';
+        ui.status('Tie! Again!');
         render();
-        sfx('aiplace');
         await sleep(900);
         newRound();
       }
       return true;
     }
 
-    async function play(i) {
+    async function move(i) {
       if (locked || board[i]) return;
       board[i] = 'X';
       sfx('place');
       locked = true;
       render();
       if (await check()) return;
-      status.textContent = 'The storm is thinking…';
+      ui.status('The storm is thinking…');
       await sleep(450 + Math.random() * 350);
       board[aiMove(board, skill)] = 'O';
       sfx('aiplace');
       locked = false;
       render();
       if (await check()) return;
-      status.textContent = 'Your move';
+      ui.status('Your move');
     }
 
     newRound();

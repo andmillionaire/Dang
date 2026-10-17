@@ -103,6 +103,16 @@ export function sfx(name, arg = 1) {
     case 'harvest': [659, 880, 1175].forEach((f, i) => tone(f, 0.08, { vol: 0.04, delay: i * 0.05, type: 'triangle' })); break;
     case 'purr': for (let i = 0; i < 6; i++) tone(55, 0.09, { vol: 0.08, type: 'sawtooth', delay: i * 0.11 }); break;
     case 'thunder': burst(2.2, { vol: 0.35, freq: 220 }); break;
+    case 'alarm': [1568, 1568, 1568].forEach((f, i) => tone(f, 0.05, { vol: 0.04, delay: i * 0.08 })); break;
+    case 'sparkle': [784, 988, 1175, 1568, 1976, 2349].forEach((f, i) => tone(f, 0.25, { vol: 0.035, delay: i * 0.07, type: 'triangle' })); break;
+    case 'morph': tone(300, 0.5, { vol: 0.05, slide: 1400, type: 'triangle' }); tone(450, 0.5, { vol: 0.03, slide: 2000, delay: 0.05 }); break;
+    case 'morphBack': tone(1400, 0.4, { vol: 0.04, slide: 300, type: 'triangle' }); break;
+    case 'peg': tone(NOTES[Math.min(arg - 1, 7)] / 2 * (1 + Math.floor((arg - 1) / 8)), 0.07, { vol: 0.045, type: 'triangle' }); break;
+    case 'mew': tone(900, 0.18, { vol: 0.04, slide: 600, type: 'triangle' }); tone(700, 0.12, { vol: 0.03, slide: 1000, delay: 0.1, type: 'sine' }); break;
+    case 'type': tone(1200 + Math.random() * 200, 0.025, { vol: 0.02 }); break;
+    case 'ring': [0, 0.12, 0.6, 0.72].forEach(d => tone(880, 0.1, { vol: 0.035, delay: d, type: 'sine' })); break;
+    case 'doorbell': tone(784, 0.5, { vol: 0.05, type: 'sine' }); tone(622, 0.7, { vol: 0.05, type: 'sine', delay: 0.4 }); break;
+    case 'glaive': burst(0.4, { vol: 0.2, freq: 5000 }); tone(220, 0.6, { vol: 0.06, slide: 880, type: 'sawtooth' }); break;
     case 'drip': tone(1400 + Math.random() * 400, 0.05, { vol: 0.015, type: 'sine', slide: 700 }); break;
   }
 }

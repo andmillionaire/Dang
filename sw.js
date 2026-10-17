@@ -4,7 +4,7 @@ const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/main.js', 'js/state.js', 'js/data.js', 'js/ui.js', 'js/audio.js', 'js/pixel.js',
   'js/sprites.js', 'js/spritedata.js', 'js/bgrain.js', 'js/rainview.js',
-  'js/match3.js', 'js/tictactoe.js', 'js/cabin.js', 'js/farm.js',
+  'js/match3.js', 'js/cabin.js', 'js/farm.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png',
 ];
 

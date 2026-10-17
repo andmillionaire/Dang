@@ -14,8 +14,6 @@ export const PAL = {
   f: '#f08ab0', F: '#c0507a',
   q: '#f08a2a', Q: '#b85a18',
   h: '#e8d070', H: '#b89a40',
-  // heroine
-  1: '#f7d4b8', 2: '#d98a8a', 3: '#6b3a2e', 4: '#9a5640', 5: '#4a2a6a',
 };
 
 // Match tiles, 12x12. Order matters: index = tile type.
@@ -387,55 +385,16 @@ export const ICON_ROWS = {
   ],
 };
 
-// ---------- heroine ----------
-// 16x27 chibi magical girl. Outfit placeholders: 7 top, 8 collar, 9 bow, 0 skirt, 6 legs, z boots.
-export const HEROINE_ROWS = [
-  '.....kkkkkk.....',
-  '...kk334433kk...',
-  '..k3334444333k..',
-  '.k333333333333k.',
-  '.k331131131133k.',
-  '.k311111111113k.',
-  'k33155111155133k',
-  'k3315w1111w5133k',
-  'k33f11111111f33k',
-  '.k311112211113k.',
-  '.k331111111133k.',
-  '..k3k111111k3k..',
-  '.k3k87711778k3k.',
-  '.k3k88799788k3k.',
-  '.k3k77799777k3k.',
-  '.k3k77777777k3k.',
-  '.k317777777713k.',
-  '..kk00000000kk..',
-  '..k0000000000k..',
-  '.k000000000000k.',
-  '.kkkkkkkkkkkkkk.',
-  '....k66kk66k....',
-  '....k66kk66k....',
-  '....k66kk66k....',
-  '....kzzkkzzk....',
-  '...kzzzkkzzzk...',
-  '...kkkk..kkkk...',
-];
-export const HEROINE_CLOSED = { 6: 'k33111111111133k', 7: 'k331kk1111kk133k' };
-
-export const OUTFIT_PAL = {
-  pajamas: { 7: '#9fd3f2', 8: '#cfe8f8', 9: '#fff4e0', 0: '#9fd3f2', 6: '#9fd3f2', z: '#f08ab0' },
-  casual:  { 7: '#efdcb4', 8: '#c9ad7f', 9: '#d0463c', 0: '#4f8fd0', 6: '#f7d4b8', z: '#6b3d22' },
-  sailor:  { 7: '#fff4e0', 8: '#4f8fd0', 9: '#d0463c', 0: '#4f8fd0', 6: '#f7d4b8', z: '#d0463c' },
-  violet:  { 7: '#efe6f6', 8: '#4a2468', 9: '#a46ad0', 0: '#4a2468', 6: '#2e1a40', z: '#4a2468' },
-};
-
+// ---------- magical accessories ----------
 // Accessories, drawn at an offset from the heroine's top-left.
 export const ACCESSORY = {
   bow:       { x: 10, y: -1, rows: ['ff.ff', 'fFFFf', 'ff.ff'] },
   tiara:     { x: 4,  y: 3,  rows: ['...yy...', 'nnnnnnnn'] },
   ringtiara: { x: 3,  y: 2,  rows: ['....PP....', 'ssPPppPPss', '....PP....'] },
-  wand:      { x: 13, y: 8,  rows: ['.y.', 'yyy', '.y.', '.f.', '.f.', '.w.', '.w.', '.w.', '.w.', '.w.'] },
+  wand:      { x: 12, y: 8,  rows: ['.y.', 'yyy', '.y.', '.f.', '.f.', '.w.', '.w.', '.w.', '.w.', '.w.'] },
   heart:     { x: 6,  y: 12, rows: ['f..f', 'ffff', '.ff.'] },
   crystal:   { x: 6,  y: 12, rows: ['.pp.', 'pwpP', '.PP.'] },
-  glaive:    { x: 0,  y: -8, rows: [
+  glaive:    { x: 1,  y: -8, rows: [
     '..ss.', '.sws.', 'sws..', 'sws..', 'sws..', '.sws.', '..sP.', '.yPy.',
     ...Array.from({ length: 26 }, (_, i) => (i % 6 === 3 ? '..p..' : '..P..')),
   ] },
@@ -464,3 +423,107 @@ export const CAT_BREEDS = [
 // ---------- star pegs ----------
 export const PEG_ROWS = ['.xxx.', 'xxwxx', 'xxxxx', 'xxxxx', '.xxx.'];
 export const BALL_ROWS = ['.ww.', 'wwww', 'wwws', '.ss.'];
+
+// ---------- charged tiles (12x12), one per match shape ----------
+export const SPECIAL_ROWS = {
+  ttt: [
+    'kkkkkkkkkkkk',
+    'kwDwyDDyDDDk',
+    'kDwDyDDyDuDk',
+    'kwDwyDDyDDDk',
+    'kyyyyyyyyyyk',
+    'kDDDyuuyDDDk',
+    'kDDDyuuyDDDk',
+    'kyyyyyyyyyyk',
+    'kDDDyDDywDwk',
+    'kDuDyDDyDwDk',
+    'kDDDyDDywDwk',
+    'kkkkkkkkkkkk',
+  ],
+  pegs: [
+    'kkkkkkkkkkkk',
+    'kPPPPwwPPPPk',
+    'kPPPPwwPPPPk',
+    'kPPPPPPPPPPk',
+    'kPUUPPPPUUPk',
+    'kPUUPPPPUUPk',
+    'kPPPPooPPPPk',
+    'kPPPoyooPPPk',
+    'kPPPooooPPPk',
+    'kPPPPooPPPPk',
+    'kPPPPPPPPPPk',
+    'kkkkkkkkkkkk',
+  ],
+  mew: [
+    'kkkkkkkkkkkk',
+    'kFFFFFFFFFFk',
+    'kFFFFFFFFFFk',
+    'kFkokFFkokFk',
+    'kFkookkookFk',
+    'kFkooooookFk',
+    'kFkoyooyokFk',
+    'kFkoofFookFk',
+    'kFFkooookFFk',
+    'kFFFkkkkFFFk',
+    'kFFFFFFFFFFk',
+    'kkkkkkkkkkkk',
+  ],
+  cw: [
+    'kkkkkkkkkkkk',
+    'kcccccccccCk',
+    'kcccckkcccCk',
+    'kccckcckccCk',
+    'kccckcckccCk',
+    'kccckkkkccCk',
+    'kccckcckccCk',
+    'kccckcckccCk',
+    'kcccccccccCk',
+    'kcccccccccCk',
+    'kCCCCCCCCCCk',
+    'kkkkkkkkkkkk',
+  ],
+};
+
+// ---------- arcade sudoku: magical-girl portraits (12x12) ----------
+// H hair, G hair shine, X tiara gem, E eyes, s skin, m mouth.
+export const GIRL_ROWS = {
+  long: [
+    '...kkkkkk...',
+    '..kHHGGHHk..',
+    '.kHyyXXyyHk.',
+    '.kHHHHHHHHk.',
+    'kHHsHHsHHsHk',
+    'kHssssssssHk',
+    'kHsEEssEEsHk',
+    'kHsEwssEwsHk',
+    'kHHfssssfHHk',
+    'kHHsssmssHHk',
+    'kHHHkkkkHHHk',
+    '.kkk....kkk.',
+  ],
+  bob: [
+    '...kkkkkk...',
+    '..kHHGGHHk..',
+    '.kHyyXXyyHk.',
+    '.kHHHHHHHHk.',
+    'kHHHHHHHHHHk',
+    'kHssssssssHk',
+    'kHsEEssEEsHk',
+    'kHsEwssEwsHk',
+    'kHHfssssfHHk',
+    '.kHsssmssHk.',
+    '.kHkkkkkkHk.',
+    '..k......k..',
+  ],
+};
+export const GIRLS = [
+  { name: 'Rose',   style: 'long', H: '#f08ab0', G: '#ffc8dc', X: '#d0463c', E: '#3a6ad0' },
+  { name: 'Sky',    style: 'bob',  H: '#4f8fd0', G: '#9fd3f2', X: '#9fd3f2', E: '#2c5a9a' },
+  { name: 'Mint',   style: 'long', H: '#4aa890', G: '#88dcc4', X: '#3d7a34', E: '#3a8a4a' },
+  { name: 'Sunny',  style: 'bob',  H: '#e8c040', G: '#f8e098', X: '#f39a3a', E: '#3a6ad0' },
+  { name: 'Lilac',  style: 'long', H: '#b090e0', G: '#dcc8f8', X: '#f08ab0', E: '#6a3aa0' },
+  { name: 'Coral',  style: 'bob',  H: '#e0603a', G: '#f8a07a', X: '#ffe27a', E: '#5a3a2a' },
+  { name: 'Snow',   style: 'long', H: '#c8c8d8', G: '#f4f4fc', X: '#4f8fd0', E: '#5a6070' },
+  { name: 'Ink',    style: 'long', H: '#2a2438', G: '#4a4060', X: '#d0463c', E: '#c04a8a' },
+  { name: 'Saturn', style: 'bob',  H: '#4a2468', G: '#7a4aa0', X: '#a46ad0', E: '#6a3aa0' },
+];

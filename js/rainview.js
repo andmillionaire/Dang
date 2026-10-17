@@ -1,7 +1,15 @@
-// A rainy night seen through glass: sky, hills, pines, rain, lightning, drops on the pane.
+// A rainy sky seen through glass: sky, hills, pines, rain, lightning, drops on the pane.
+const PALETTES = {
+  night: { sky: ['#141c34', '#19223e', '#1d2848'], flash: ['#5a6a9a', '#4a5a8a', '#3a4a78'], hill: '#111a30', tree: '#0b1324', rain: 'rgba(140,170,220,0.55)' },
+  dawn: { sky: ['#6a7698', '#7c86a4', '#9a98aa'], flash: ['#b8c0dc', '#a8b0cc', '#9aa0bc'], hill: '#4a5672', tree: '#36405a', rain: 'rgba(230,236,250,0.5)' },
+};
+
 export class RainWindow {
-  constructor(w, h, { onThunder, trees = true } = {}) {
+  constructor(w, h, { onThunder, trees = true, palette = 'night' } = {}) {
     this.w = w; this.h = h; this.onThunder = onThunder;
+    this.pal = PALETTES[palette];
+    this.moon = false;
+    this.saturn = false;
     this.drops = Array.from({ length: Math.floor((w * h) / 45) }, () => this.newDrop(true));
     this.glass = Array.from({ length: Math.max(3, ((w * h) / 260) | 0) }, () => ({
       x: (Math.random() * w) | 0, y: Math.random() * h, v: 0.01 + Math.random() * 0.04, slide: 0,
@@ -42,12 +50,25 @@ export class RainWindow {
     const f = this.flashLevel(now);
     ctx.save();
     ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-    ctx.fillStyle = f > 0.3 ? '#5a6a9a' : '#141c34'; ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = f > 0.3 ? '#4a5a8a' : '#19223e'; ctx.fillRect(x, y + (h * 0.35 | 0), w, h);
-    ctx.fillStyle = f > 0.3 ? '#3a4a78' : '#1d2848'; ctx.fillRect(x, y + (h * 0.6 | 0), w, h);
-    ctx.fillStyle = '#111a30';
+    const P = this.pal, sky = f > 0.3 ? P.flash : P.sky;
+    ctx.fillStyle = sky[0]; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = sky[1]; ctx.fillRect(x, y + (h * 0.35 | 0), w, h);
+    ctx.fillStyle = sky[2]; ctx.fillRect(x, y + (h * 0.6 | 0), w, h);
+    if (this.moon) {
+      const mx = x + Math.round(w * 0.74), my = y + 9;
+      ctx.fillStyle = 'rgba(242,230,201,0.12)'; disc(ctx, mx, my, 8);
+      ctx.fillStyle = '#f2e6c9'; disc(ctx, mx, my, 4);
+      ctx.fillStyle = '#d8c8a8'; ctx.fillRect(mx - 1, my - 1, 2, 2); ctx.fillRect(mx + 1, my + 2, 1, 1);
+    }
+    if (this.saturn) {
+      const sx = x + Math.round(w * 0.24), sy = y + 12;
+      ctx.fillStyle = 'rgba(164,106,208,0.18)'; disc(ctx, sx, sy, 7);
+      ctx.fillStyle = '#c8a0ec'; disc(ctx, sx, sy, 3);
+      ctx.fillStyle = '#efdcb4'; ctx.fillRect(sx - 7, sy, 15, 1); ctx.fillRect(sx - 5, sy + 1, 2, 1); ctx.fillRect(sx + 4, sy - 1, 2, 1);
+    }
+    ctx.fillStyle = P.hill;
     for (let i = 0; i < w; i++) ctx.fillRect(x + i, y + h - this.hills[i], 1, this.hills[i]);
-    ctx.fillStyle = '#0b1324';
+    ctx.fillStyle = P.tree;
     for (const [tx, th] of this.trees) {
       const base = y + h - 4;
       for (let k = 0; k < th; k++) {
@@ -56,7 +77,7 @@ export class RainWindow {
       }
       ctx.fillRect(x + tx, base, 1, 4);
     }
-    ctx.fillStyle = 'rgba(140,170,220,0.55)';
+    ctx.fillStyle = P.rain;
     for (const d of this.drops) {
       for (let i = 0; i < d.l; i++) ctx.fillRect(x + ((d.x - i * 0.3) | 0), y + ((d.y + i) | 0), 1, 1);
     }
@@ -69,5 +90,12 @@ export class RainWindow {
     for (let i = 0; i < 6; i++) ctx.fillRect(x + 3 + i, y + 2 + i * 2, 1, 2);
     ctx.restore();
     return f;
+  }
+}
+
+function disc(ctx, cx, cy, r) {
+  for (let dy = -r; dy <= r; dy++) {
+    const hw = Math.round(Math.sqrt(r * r - dy * dy));
+    ctx.fillRect(cx - hw, cy + dy, hw * 2 + 1, 1);
   }
 }

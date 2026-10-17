@@ -1,11 +1,12 @@
 import { fitCanvas, toLogical, hash } from './pixel.js';
 import { RainWindow } from './rainview.js';
 import { S } from './state.js';
-import { ICONS } from './sprites.js';
+import { drawHero, fullSaturn, W as HW } from './hero.js';
 
 const LW = 144, LH = 208;
 const WX = 48, WY = 26, WW = 48, WH = 56;
 const FLOOR = 152;
+const HERO = { x: 28, y: 160 };
 
 export class Cabin {
   constructor(canvas, hooks) {
@@ -14,9 +15,12 @@ export class Cabin {
     this.win = new RainWindow(WW, WH, { onThunder: () => hooks.sfx('thunder') });
     this.active = false;
     this.purrUntil = 0;
+    this.sparkleAt = 0;
+    this.win.moon = true;
     canvas.addEventListener('pointerdown', e => {
       const p = toLogical(canvas, LW, LH, e);
-      if (p.x >= 108 && p.x <= 138 && p.y < FLOOR) hooks.onLadder();
+      if (p.x >= HERO.x - 2 && p.x <= HERO.x + HW + 2 && p.y >= HERO.y - 4 && p.y <= HERO.y + 28) { this.sparkleAt = performance.now(); hooks.onHero(); }
+      else if (p.x >= 108 && p.x <= 138 && p.y < FLOOR) hooks.onLadder();
       else if (S.decor.catbed && p.x >= 58 && p.x <= 90 && p.y >= 160) { this.purrUntil = performance.now() + 1500; hooks.onCat(); }
       else if (p.x >= WX && p.x <= WX + WW && p.y >= WY && p.y <= WY + WH) this.win.strike();
     });
@@ -34,6 +38,7 @@ export class Cabin {
   loop = () => {
     if (!this.active) { this.raf = 0; return; }
     const now = performance.now();
+    this.win.saturn = fullSaturn();
     this.win.update(now);
     this.draw(now);
     this.raf = requestAnimationFrame(this.loop);
@@ -138,16 +143,11 @@ export class Cabin {
 
     // ladder to the attic
     R('#1a0f0c', 110, 0, 26, 10);
-    if (S.farmUnlocked) {
-      R('#f4c27a', 112, 1, 22, 8);
-    } else {
-      R('#4e2e1c', 112, 1, 22, 8); R('#3a2216', 122, 1, 1, 8);
-    }
+    R('#f4c27a', 112, 1, 22, 8);
     R('#6b3d22', 114, 10, 3, FLOOR - 6); R('#6b3d22', 129, 10, 3, FLOOR - 6);
     R('#a0663a', 115, 10, 1, FLOOR - 6); R('#a0663a', 130, 10, 1, FLOOR - 6);
     for (let y = 18; y < FLOOR; y += 12) { R('#8a5a34', 117, y, 12, 2); R('#5a3622', 117, y + 2, 12, 1); }
-    if (!S.farmUnlocked) ctx.drawImage(ICONS.lock, 119, 24);
-    else if (Math.floor(now / 600) % 2) { R('#ffe27a', 122, 22, 2, 1); R('#ffe27a', 121, 23, 4, 1); }
+    if (Math.floor(now / 600) % 2) { R('#ffe27a', 122, 22, 2, 1); R('#ffe27a', 121, 23, 4, 1); }
 
     if (D.lights) {
       const colors = ['#d0463c', '#ffe27a', '#6fb04a', '#4f8fd0', '#f08ab0'];
@@ -229,6 +229,18 @@ export class Cabin {
       ctx.globalAlpha = 1;
     }
 
+    // you
+    const bob = Math.floor(now / 700) % 2;
+    R('rgba(20,10,10,0.35)', HERO.x + 2, HERO.y + 26, 12, 2);
+    drawHero(ctx, HERO.x, HERO.y - bob, { now });
+    const sp = now - this.sparkleAt;
+    if (sp < 900) {
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + sp / 300, r = 4 + sp / 60;
+        R(i % 2 ? '#ffe27a' : '#f08ab0', Math.round(HERO.x + 8 + Math.cos(a) * r), Math.round(HERO.y + 12 + Math.sin(a) * r), 1, 1);
+      }
+    }
+
     // lighting: the room gets cozier as it fills up
     const owned = Object.keys(D).length;
     R(`rgba(12,8,28,${Math.max(0.08, 0.34 - owned * 0.025)})`, 0, 0, LW, LH);
@@ -241,7 +253,7 @@ export class Cabin {
     };
     glow(22, FLOOR - 14, 90, 0.18 + hash(tq) * 0.05);
     glow(35, 80, 18, 0.12);
-    if (S.farmUnlocked) glow(123, 8, 34, 0.22 + Math.sin(now / 500) * 0.04, '255,200,120');
+    glow(123, 8, 34, 0.22 + Math.sin(now / 500) * 0.04, '255,200,120');
     if (D.lantern) glow(109, 131, 30, 0.15 + hash(tq + 5) * 0.05);
     if (D.lights) glow(54, 14, 70, 0.08, '255,220,150');
     if (flash > 0) R(`rgba(200,215,255,${flash * 0.18})`, 0, 0, LW, LH);

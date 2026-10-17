@@ -49,10 +49,10 @@ export const WARDROBE = [
   { id: 'tiara',     slot: 'head',   name: 'Crescent Tiara',          rarity: 'rare',      cost: 6,  perk: '+10% points' },
   { id: 'heart',     slot: 'brooch', name: 'Heart Brooch',            rarity: 'rare',      cost: 6,  perk: 'Mini-games are a little easier' },
   { id: 'wand',      slot: 'held',   name: 'Star Wand',               rarity: 'rare',      cost: 8,  perk: 'Hints find your biggest match, sooner' },
-  { id: 'ringtiara', slot: 'head',   name: 'Saturn Ring Tiara',       rarity: 'legendary', cost: 12, unlock: { miniWins: 10 },  perk: 'Storm Blasts hit a 7×7 area' },
+  { id: 'ringtiara', slot: 'head',   name: 'Saturn Ring Tiara',       rarity: 'legendary', cost: 12, unlock: { miniWins: 10 },  perk: 'Every blast reaches further' },
   { id: 'violet',    slot: 'outfit', name: 'Saturn Guardian Uniform', rarity: 'legendary', cost: 15, unlock: { day: 7 },        perk: '+3 moves, and tic-tac-toe ties count as wins' },
   { id: 'crystal',   slot: 'brooch', name: 'Saturn Crystal',          rarity: 'legendary', cost: 15, unlock: { threeStars: 5 }, perk: 'Lose a mini-game? Retry it, once per level' },
-  { id: 'glaive',    slot: 'held',   name: 'Saturn Glaive',           rarity: 'legendary', cost: 20, unlock: { blasts: 20 },    perk: 'Once per level, a big match detonates instantly' },
+  { id: 'glaive',    slot: 'held',   name: 'Saturn Glaive',           rarity: 'legendary', cost: 20, unlock: { blasts: 20 },    perk: 'Once per level, a charged tile blasts with no mini-game' },
 ];
 export const SATURN_SET = ['ringtiara', 'violet', 'crystal', 'glaive'];
 

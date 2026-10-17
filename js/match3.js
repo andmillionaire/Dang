@@ -1,31 +1,40 @@
 import { fitCanvas, toLogical, sleep, tween, ease } from './pixel.js';
-import { TILES, TILES_WHITE, TILES_GREY, TILE_COLORS } from './sprites.js';
+import { TILES, TILES_GREY, TILE_COLORS, SPECIALS } from './sprites.js';
 
 export const COLS = 7, ROWS = 9;
 const CELL = 14, PAD = 4;
 const LW = COLS * CELL + PAD * 2, LH = ROWS * CELL + PAD * 2;
-export const BIG_MATCH = 5;
 
 const inBounds = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
 const key = p => p.r * COLS + p.c;
 let uid = 0;
 
+// Which charged tile a match shape makes. Order matters: the first rule that fits wins.
+export function kindOf(g) {
+  if (Math.max(g.h, g.v) >= 5) return 'pegs';
+  if (g.h >= 3 && g.v >= 3) return 'mew';
+  if (g.sq) return 'cw';
+  if (Math.max(g.h, g.v) === 4) return 'ttt';
+  return null;
+}
+
 export class Board {
   constructor(canvas, hooks) {
     this.canvas = canvas;
-    this.hooks = hooks; // onUpdate(board), onBigMatch(board) -> Promise<'win'|'lose'|'draw'>, onEnd(board, won), sfx(name, arg), toast(msg)
+    // onUpdate(board), onSpecial(board, kinds) -> Promise<'win'|'lose'|'draw'>, onEnd(board, won), sfx(name, arg), toast(msg)
+    this.hooks = hooks;
     this.grid = [];
     this.particles = [];
     this.floaters = [];
     this.shake = 0;
     this.flash = 0;
+    this.cover = 0;
     this.busy = true;
     this.running = false;
     canvas.addEventListener('pointerdown', e => this.onDown(e));
     canvas.addEventListener('pointermove', e => this.onMove(e));
-    const up = () => (this.drag = null);
-    canvas.addEventListener('pointerup', up);
-    canvas.addEventListener('pointercancel', up);
+    canvas.addEventListener('pointerup', e => this.onUp(e));
+    canvas.addEventListener('pointercancel', () => (this.drag = null));
   }
 
   resize() {
@@ -43,6 +52,8 @@ export class Board {
     this.hint = null;
     this.particles = [];
     this.floaters = [];
+    this.cover = 0;
+    this.warnedNoMoves = false;
     this.fillInitial();
     this.running = true;
     this.resize();
@@ -66,8 +77,13 @@ export class Board {
 
   // ---------- board logic ----------
   rnd() { return Math.floor(Math.random() * this.cfg.types); }
-  newTile(t, c, r) { return { t, x: c, y: r, s: 1, a: 1, charged: false, dead: false, id: ++uid }; }
-  T(r, c) { const t = this.grid[r] && this.grid[r][c]; return t ? t.t : -1; }
+  newTile(t, c, r) { return { t, sp: null, x: c, y: r, s: 1, charged: false, dead: false, id: ++uid }; }
+  // Colour at a cell: -1 empty, -2 charged tile (never matches).
+  T(r, c) {
+    const t = this.grid[r] && this.grid[r][c];
+    return !t ? -1 : t.sp ? -2 : t.t;
+  }
+  specials() { return this.grid.flat().filter(t => t && t.sp); }
 
   fillInitial() {
     do {
@@ -77,22 +93,26 @@ export class Board {
         for (let c = 0; c < COLS; c++) {
           let t;
           do t = this.rnd();
-          while ((c >= 2 && this.T(r, c - 1) === t && this.T(r, c - 2) === t) || (r >= 2 && this.T(r - 1, c) === t && this.T(r - 2, c) === t));
+          while (
+            (c >= 2 && this.T(r, c - 1) === t && this.T(r, c - 2) === t) ||
+            (r >= 2 && this.T(r - 1, c) === t && this.T(r - 2, c) === t) ||
+            (r >= 1 && c >= 1 && this.T(r - 1, c) === t && this.T(r, c - 1) === t && this.T(r - 1, c - 1) === t)
+          );
           this.grid[r].push(this.newTile(t, c, r));
         }
       }
     } while (!this.findMoves().length);
   }
 
-  // Groups of connected same-type cells that belong to a line of 3+.
-  // A horizontal and a vertical run sharing a cell merge, so L/T shapes count as one large match.
+  // Connected same-colour cells belonging to a line of 3+ or a 2x2 box.
+  // Returns [{ cells, h, v, sq }] with the longest horizontal/vertical run and whether a box is inside.
   findGroups() {
     const N = ROWS * COLS;
     const parent = Array.from({ length: N }, (_, i) => i);
     const find = i => (parent[i] === i ? i : (parent[i] = find(parent[i])));
     const union = (a, b) => { a = find(a); b = find(b); if (a !== b) parent[a] = b; };
-    const inRun = new Uint8Array(N);
-    const scan = (outer, inner, at) => {
+    const inRun = new Uint8Array(N), hRun = new Uint8Array(N), vRun = new Uint8Array(N), sq = new Uint8Array(N);
+    const scan = (outer, inner, at, runs) => {
       for (let o = 0; o < outer; o++) {
         let i = 0;
         while (i < inner) {
@@ -102,28 +122,40 @@ export class Board {
           if (t >= 0 && e - i >= 3) {
             const [r0, c0] = at(o, i);
             for (let k = i; k < e; k++) {
-              const [r, c] = at(o, k);
-              inRun[r * COLS + c] = 1;
-              union(r * COLS + c, r0 * COLS + c0);
+              const [r, c] = at(o, k), idx = r * COLS + c;
+              inRun[idx] = 1;
+              runs[idx] = e - i;
+              union(idx, r0 * COLS + c0);
             }
           }
           i = e;
         }
       }
     };
-    scan(ROWS, COLS, (r, c) => [r, c]);
-    scan(COLS, ROWS, (c, r) => [r, c]);
+    scan(ROWS, COLS, (r, c) => [r, c], hRun);
+    scan(COLS, ROWS, (c, r) => [r, c], vRun);
+    for (let r = 0; r < ROWS - 1; r++) for (let c = 0; c < COLS - 1; c++) {
+      const t = this.T(r, c);
+      if (t < 0 || this.T(r, c + 1) !== t || this.T(r + 1, c) !== t || this.T(r + 1, c + 1) !== t) continue;
+      const box = [r * COLS + c, r * COLS + c + 1, (r + 1) * COLS + c, (r + 1) * COLS + c + 1];
+      for (const i of box) { inRun[i] = 1; sq[i] = 1; union(i, box[0]); }
+    }
     const groups = new Map();
     for (let i = 0; i < N; i++) {
       if (!inRun[i]) continue;
       const root = find(i);
-      if (!groups.has(root)) groups.set(root, []);
-      groups.get(root).push({ r: Math.floor(i / COLS), c: i % COLS });
+      if (!groups.has(root)) groups.set(root, { cells: [], h: 0, v: 0, sq: false });
+      const g = groups.get(root);
+      g.cells.push({ r: Math.floor(i / COLS), c: i % COLS });
+      g.h = Math.max(g.h, hRun[i]);
+      g.v = Math.max(g.v, vRun[i]);
+      g.sq = g.sq || !!sq[i];
     }
     return [...groups.values()];
   }
 
-  lineAt(r, c) {
+  // How big a match a cell is part of right now (0 if none). Boxes count as 4, crosses as 5.
+  matchAt(r, c) {
     const t = this.T(r, c);
     if (t < 0) return 0;
     let h = 1, v = 1;
@@ -131,7 +163,14 @@ export class Board {
     for (let k = c + 1; k < COLS && this.T(r, k) === t; k++) h++;
     for (let k = r - 1; k >= 0 && this.T(k, c) === t; k--) v++;
     for (let k = r + 1; k < ROWS && this.T(k, c) === t; k++) v++;
-    return Math.max(h >= 3 ? h : 0, v >= 3 ? v : 0) + (h >= 3 && v >= 3 ? Math.min(h, v) - 1 : 0);
+    let size = Math.max(h >= 3 ? h : 0, v >= 3 ? v : 0);
+    if (h >= 3 && v >= 3) size = Math.max(size, 5);
+    for (const [dr, dc] of [[0, 0], [0, -1], [-1, 0], [-1, -1]]) {
+      const r0 = r + dr, c0 = c + dc;
+      if (r0 >= 0 && c0 >= 0 && r0 < ROWS - 1 && c0 < COLS - 1 &&
+        this.T(r0, c0) === t && this.T(r0, c0 + 1) === t && this.T(r0 + 1, c0) === t && this.T(r0 + 1, c0 + 1) === t) size = Math.max(size, 4);
+    }
+    return size;
   }
 
   findMoves() {
@@ -140,9 +179,10 @@ export class Board {
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       for (const [dr, dc] of [[0, 1], [1, 0]]) {
         const r2 = r + dr, c2 = c + dc;
-        if (!inBounds(r2, c2)) continue;
+        if (!inBounds(r2, c2) || !g[r][c] || !g[r2][c2]) continue;
+        if (g[r][c].sp && g[r2][c2].sp) { moves.push({ a: { r, c }, b: { r: r2, c: c2 }, size: 9 }); continue; }
         [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
-        const size = Math.max(this.lineAt(r, c), this.lineAt(r2, c2));
+        const size = Math.max(this.matchAt(r, c), this.matchAt(r2, c2));
         [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
         if (size) moves.push({ a: { r, c }, b: { r: r2, c: c2 }, size });
       }
@@ -171,9 +211,9 @@ export class Board {
       return;
     }
     if (this.sel && key(this.sel) === key(p)) { this.sel = null; return; }
-    this.sel = p;
-    this.hooks.sfx('select');
-    this.drag = { ...p, x: e.clientX, y: e.clientY };
+    this.drag = { ...p, x: e.clientX, y: e.clientY, special: !!this.grid[p.r][p.c].sp };
+    if (!this.drag.special) { this.sel = p; this.hooks.sfx('select'); }
+    this.canvas.setPointerCapture?.(e.pointerId);
   }
 
   onMove(e) {
@@ -189,13 +229,35 @@ export class Board {
     this.attemptSwap(a, b);
   }
 
+  // A tap (no drag) on a charged tile plays its mini-game.
+  onUp() {
+    const d = this.drag;
+    this.drag = null;
+    if (!d || !d.special || this.busy || this.ended) return;
+    this.activate({ r: d.r, c: d.c });
+  }
+
   // ---------- turn flow ----------
   async attemptSwap(a, b) {
+    if (this.moves <= 0) {
+      this.hooks.toast('Out of moves! Tap your charged tiles to set them off.');
+      return;
+    }
     const gen = this.gen;
     this.busy = true;
     this.hint = null;
-    this.hooks.sfx('swap');
     const A = this.grid[a.r][a.c], B = this.grid[b.r][b.c];
+
+    if (A.sp && B.sp) {
+      this.hooks.sfx('swap');
+      await tween(160, t => { A.x = a.c + (b.c - a.c) * t * 0.6; A.y = a.r + (b.r - a.r) * t * 0.6; }, ease.inOut);
+      this.moves--;
+      this.hooks.onUpdate(this);
+      await this.detonate([A, B], b, gen);
+      return this.afterTurn(gen);
+    }
+
+    this.hooks.sfx('swap');
     await this.animSwap(A, B, a, b);
     this.grid[a.r][a.c] = B;
     this.grid[b.r][b.c] = A;
@@ -210,7 +272,19 @@ export class Board {
     }
     this.moves--;
     this.hooks.onUpdate(this);
-    await this.resolve(groups, gen);
+    await this.resolve(groups, gen, [a, b]);
+    return this.afterTurn(gen);
+  }
+
+  async activate(p) {
+    const gen = this.gen;
+    this.busy = true;
+    this.hint = null;
+    await this.detonate([this.grid[p.r][p.c]], p, gen);
+    return this.afterTurn(gen);
+  }
+
+  async afterTurn(gen) {
     if (gen !== this.gen || !this.running || this.checkEnd()) return;
     await this.ensureMoves();
     this.busy = false;
@@ -224,69 +298,104 @@ export class Board {
     }, ease.inOut);
   }
 
-  async resolve(groups, gen) {
+  async resolve(groups, gen, origins = []) {
     let combo = 0;
     while (groups.length && this.running && gen === this.gen) {
       combo++;
-      const small = groups.filter(g => g.length < BIG_MATCH);
-      const big = groups.filter(g => g.length >= BIG_MATCH);
-      if (small.length) {
-        let pts = 0;
-        for (const g of small) pts += g.length * 10 * combo + (g.length === 4 ? 40 : 0);
-        const cells = small.flat();
-        this.addScore(pts, cells);
-        this.hooks.sfx('pop', combo);
-        await this.pop(cells);
+      const clear = [];
+      let pts = 0;
+      for (const g of groups) {
+        pts += g.cells.length * 10 * combo + Math.max(0, g.cells.length - 3) * 20;
+        const kind = kindOf(g);
+        let keep = null;
+        if (kind) {
+          keep = (combo === 1 && origins.find(o => g.cells.some(p => key(p) === key(o)))) || g.cells[Math.floor(g.cells.length / 2)];
+          const t = this.grid[keep.r][keep.c];
+          t.sp = kind;
+          t.born = performance.now();
+          this.hooks.sfx('charge');
+          this.burst(keep, '#ffe27a', 10);
+          this.hooks.onCreate && this.hooks.onCreate(kind);
+        }
+        for (const p of g.cells) if (!keep || key(p) !== key(keep)) clear.push(p);
       }
-      for (const g of big) {
-        const live = g.filter(p => this.grid[p.r][p.c]);
-        if (live.length) await this.bigMatch(live, combo);
-        if (gen !== this.gen) return;
-      }
+      this.addScore(pts, groups.flatMap(g => g.cells));
+      this.hooks.sfx('pop', combo);
+      await this.pop(clear);
       await this.collapse();
       groups = this.findGroups();
     }
   }
 
-  // The large match is held, glowing, until the mini-game is decided.
-  async bigMatch(cells, combo) {
-    const tiles = cells.map(p => this.grid[p.r][p.c]);
+  // Cells a charged tile clears. Charged tiles themselves are never caught in a blast.
+  blastCells(kinds, at) {
+    const big = !!this.cfg.bigBlasts;
+    const out = new Map();
+    const add = (r, c) => { if (inBounds(r, c) && this.grid[r][c] && !this.grid[r][c].sp) out.set(r * COLS + c, { r, c }); };
+    if (kinds.length === 2 && kinds[0] === kinds[1]) {
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) add(r, c);
+      return [...out.values()];
+    }
+    for (const k of kinds) {
+      if (k === 'ttt') {
+        for (let w = big ? -1 : 0; w <= (big ? 1 : 0); w++) {
+          for (let c = 0; c < COLS; c++) add(at.r + w, c);
+          for (let r = 0; r < ROWS; r++) add(r, at.c + w);
+        }
+      } else if (k === 'mew') {
+        const rad = big ? 3 : 2;
+        for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) add(at.r + dr, at.c + dc);
+      } else if (k === 'cw') {
+        for (let d = -ROWS; d <= ROWS; d++) { add(at.r + d, at.c + d); add(at.r + d, at.c - d); }
+        if (big) for (let c = 0; c < COLS; c++) add(at.r, c);
+      } else if (k === 'pegs') {
+        const counts = {};
+        for (const t of this.grid.flat()) if (t && !t.sp) counts[t.t] = (counts[t.t] || 0) + 1;
+        const ranked = Object.keys(counts).sort((x, y) => counts[y] - counts[x]).map(Number).slice(0, big ? 2 : 1);
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (ranked.includes(this.T(r, c))) add(r, c);
+      }
+    }
+    return [...out.values()];
+  }
+
+  // Play the mini-game for one charged tile (or two, swapped together), then blast or fizzle.
+  async detonate(tiles, at, gen) {
     tiles.forEach(t => (t.charged = true));
     this.hooks.sfx('charge');
-    await sleep(750);
-    const result = await this.hooks.onBigMatch(this);
+    await sleep(350);
+    const result = await this.hooks.onSpecial(this, tiles.map(t => t.sp));
     tiles.forEach(t => (t.charged = false));
-    if (!this.running || this.grid[cells[0].r][cells[0].c] !== tiles[0]) return;
+    if (gen !== this.gen || !this.running) return;
+    const where = tiles.map(t => this.find(t));
 
     if (result === 'win') {
-      const cr = cells.reduce((s, p) => s + p.r, 0) / cells.length;
-      const cc = cells.reduce((s, p) => s + p.c, 0) / cells.length;
-      const center = cells.reduce((best, p) => (Math.hypot(p.r - cr, p.c - cc) < Math.hypot(best.r - cr, best.c - cc) ? p : best));
-      const area = new Map(cells.map(p => [key(p), p]));
-      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
-        const p = { r: center.r + dr, c: center.c + dc };
-        if (inBounds(p.r, p.c) && this.grid[p.r][p.c]) area.set(key(p), p);
-      }
-      const all = [...area.values()];
-      this.blasts++;
+      const cells = this.blastCells(tiles.map(t => t.sp), at);
+      this.blasts += tiles.length;
       this.hooks.sfx('boom');
       this.shake = 10;
       this.flash = 1;
-      this.addScore(300 + all.length * 15 * combo, [center], 'BLAST!');
+      tiles.forEach(t => (t.sp = null));
+      this.addScore(250 * tiles.length + cells.length * 15, [at], tiles.length > 1 ? 'MASHUP!' : 'BLAST!');
       this.hooks.onUpdate(this);
-      await this.pop(all, center);
+      await this.pop([...cells, ...where], at);
     } else {
       tiles.forEach(t => (t.dead = true));
       this.hooks.sfx('fizzle');
       await sleep(350);
-      this.addScore(cells.length * 5, cells, 'fizzle');
-      await this.pop(cells);
+      await this.pop(where);
     }
+    await this.collapse();
+    await this.resolve(this.findGroups(), gen);
+  }
+
+  find(tile) {
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (this.grid[r][c] === tile) return { r, c };
+    return null;
   }
 
   async pop(cells, center) {
-    const items = cells.map(p => ({ p, tile: this.grid[p.r][p.c], burst: false })).filter(x => x.tile);
-    const delay = x => (center ? (Math.abs(x.p.r - center.r) + Math.abs(x.p.c - center.c)) * 45 : 0);
+    const items = cells.filter(Boolean).map(p => ({ p, tile: this.grid[p.r][p.c], burst: false })).filter(x => x.tile);
+    const delay = x => (center ? (Math.abs(x.p.r - center.r) + Math.abs(x.p.c - center.c)) * 40 : 0);
     const dur = 190;
     const total = dur + Math.max(0, ...items.map(delay));
     await tween(total, t => {
@@ -295,12 +404,12 @@ export class Board {
         const lt = Math.min(1, Math.max(0, (now - delay(x)) / dur));
         if (lt > 0 && !x.burst) {
           x.burst = true;
-          this.burst(x.p, x.tile.dead ? '#6e6878' : TILE_COLORS[x.tile.t], center ? 9 : 5);
+          this.burst(x.p, x.tile.dead ? '#6e6878' : x.tile.sp ? '#ffe27a' : TILE_COLORS[x.tile.t], center ? 9 : 5);
         }
         x.tile.s = lt < 0.3 ? 1 + lt : 1.3 * (1 - (lt - 0.3) / 0.7);
       }
     });
-    for (const x of items) this.grid[x.p.r][x.p.c] = null;
+    for (const x of items) if (this.grid[x.p.r][x.p.c] === x.tile) this.grid[x.p.r][x.p.c] = null;
   }
 
   async collapse() {
@@ -311,6 +420,7 @@ export class Board {
         const t = this.grid[r][c];
         if (!t) continue;
         if (r !== write) { this.grid[write][c] = t; this.grid[r][c] = null; }
+        t.x = c;
         t.fromY = t.y; t.toY = write;
         if (t.y !== write) moving.push(t);
         write--;
@@ -333,9 +443,9 @@ export class Board {
 
   async ensureMoves() {
     if (this.findMoves().length) return;
-    this.hooks.toast('No moves left. Shuffling!');
+    this.hooks.toast('No swaps left. Shuffling!');
     await sleep(500);
-    const tiles = this.grid.flat();
+    const tiles = this.grid.flat().filter(t => !t.sp);
     do {
       for (let i = tiles.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -348,15 +458,21 @@ export class Board {
   checkEnd() {
     const c = this.cfg;
     const won = this.score >= c.target && this.blasts >= c.blasts;
-    if (won || this.moves <= 0) {
+    const stuck = this.moves <= 0 && !this.specials().length;
+    if (won || stuck) {
       this.ended = true;
       this.hooks.onEnd(this, won);
       return true;
+    }
+    if (this.moves <= 0 && !this.warnedNoMoves) {
+      this.warnedNoMoves = true;
+      this.hooks.toast('Out of moves! Tap your charged tiles to set them off.');
     }
     return false;
   }
 
   addScore(pts, cells, label) {
+    pts = Math.round(pts * (this.cfg.scoreMult || 1));
     this.score += pts;
     const p = cells[Math.floor(cells.length / 2)];
     this.floaters.push({ x: PAD + p.c * CELL + CELL / 2, y: PAD + p.r * CELL + 4, text: label ? `${label} +${pts}` : `+${pts}`, life: 1, big: !!label });
@@ -369,6 +485,13 @@ export class Board {
       const a = Math.random() * Math.PI * 2, v = 0.6 + Math.random() * 1.6;
       this.particles.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.8, life: 1, c: color, s: Math.random() < 0.3 ? 2 : 1 });
     }
+  }
+
+  // Pixel-dissolve the board away (1) or back in (0) around a mini-game.
+  morph(target) {
+    const from = this.cover;
+    this.hooks.sfx(target ? 'morph' : 'morphBack');
+    return tween(target ? 520 : 420, t => (this.cover = from + (target - from) * t));
   }
 
   // ---------- render ----------
@@ -386,9 +509,11 @@ export class Board {
     this.floaters = this.floaters.filter(f => f.life > 0);
     this.shake *= 0.88;
     this.flash *= 0.9;
-    if (!this.busy && !this.ended && !this.hint && performance.now() - this.lastInput > 6000) {
+    const wait = this.cfg.wand ? 2500 : 6000;
+    if (!this.busy && !this.ended && !this.hint && this.moves > 0 && performance.now() - this.lastInput > wait) {
       const moves = this.findMoves();
-      this.hint = moves[Math.floor(Math.random() * moves.length)] || null;
+      if (this.cfg.wand) moves.sort((a, b) => b.size - a.size);
+      this.hint = (this.cfg.wand ? moves[0] : moves[Math.floor(Math.random() * moves.length)]) || null;
     }
   }
 
@@ -410,6 +535,7 @@ export class Board {
 
     const hintIds = this.hint ? [this.grid[this.hint.a.r][this.hint.a.c], this.grid[this.hint.b.r][this.hint.b.c]].map(t => t && t.id) : [];
     const pulse = (Math.sin(now / 90) + 1) / 2;
+    const slow = (Math.sin(now / 260) + 1) / 2;
 
     ctx.save();
     ctx.beginPath(); ctx.rect(PAD, PAD, COLS * CELL, ROWS * CELL); ctx.clip();
@@ -418,30 +544,33 @@ export class Board {
       if (!t || t.s <= 0.01) continue;
       let px = Math.round(PAD + t.x * CELL + 1), py = Math.round(PAD + t.y * CELL + 1);
       if (hintIds.includes(t.id)) py += Math.round(Math.sin(now / 110));
+      if (t.sp && !t.dead) {
+        // charged tiles glow so they read as tappable
+        ctx.fillStyle = `rgba(255,226,122,${0.18 + slow * 0.3})`;
+        ctx.fillRect(PAD + t.x * CELL, PAD + t.y * CELL, CELL, CELL);
+      }
       if (t.charged) {
         px += Math.round((Math.random() - 0.5) * 2);
         py += Math.round((Math.random() - 0.5) * 2);
         ctx.fillStyle = `rgba(255,226,122,${0.35 + pulse * 0.45})`;
         ctx.fillRect(PAD + t.x * CELL, PAD + t.y * CELL, CELL, CELL);
       }
-      const img = t.dead ? TILES_GREY[t.t] : TILES[t.t];
+      const img = t.sp ? SPECIALS[t.sp] : t.dead ? TILES_GREY[t.t] : TILES[t.t];
+      if (t.dead) ctx.globalAlpha = 0.5;
       if (t.s !== 1) {
         const w = 12 * t.s;
         ctx.drawImage(img, px + 6 - w / 2, py + 6 - w / 2, w, w);
       } else ctx.drawImage(img, px, py);
-      if (t.charged) {
-        ctx.globalAlpha = pulse * 0.7;
-        ctx.drawImage(TILES_WHITE[t.t], px, py);
-        ctx.globalAlpha = 1;
-      }
-    }
-    // little sparks between charged tiles
-    const charged = this.grid.flat().filter(t => t && t.charged);
-    if (charged.length) {
-      ctx.fillStyle = '#fff8e0';
-      for (let i = 0; i < 6; i++) {
-        const t = charged[(Math.random() * charged.length) | 0];
-        ctx.fillRect(Math.round(PAD + t.x * CELL + Math.random() * CELL), Math.round(PAD + t.y * CELL + Math.random() * CELL), 1, 1);
+      ctx.globalAlpha = 1;
+      if (t.sp && !t.dead) {
+        const k = Math.floor(now / 140 + t.id) % 24;
+        const edge = [[0, 0], [11, 0], [11, 11], [0, 11]][k % 4];
+        if (k < 8) { ctx.fillStyle = '#fff8e0'; ctx.fillRect(px + edge[0], py + edge[1], 1, 1); }
+        const born = now - (t.born || 0);
+        if (born < 600) {
+          ctx.fillStyle = `rgba(255,248,224,${1 - born / 600})`;
+          ctx.fillRect(px - 1, py - 1, 14, 14);
+        }
       }
     }
     ctx.restore();
@@ -470,6 +599,16 @@ export class Board {
       ctx.fillStyle = f.big ? '#ffe27a' : '#fff4e0'; ctx.fillText(f.text, x, y);
     }
     ctx.globalAlpha = 1;
+
+    if (this.cover > 0.001) {
+      const B = 6, cols = Math.ceil(LW / B), rows = Math.ceil(LH / B);
+      for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+        const order = (((i * 7 + j * 13) % 17) / 17) * 0.6 + (Math.abs(j - rows / 2) / rows) * 0.4;
+        if (order >= this.cover) continue;
+        ctx.fillStyle = (i + j) % 5 === 0 ? '#3a2a5c' : '#1a1430';
+        ctx.fillRect(i * B, j * B, B, B);
+      }
+    }
 
     if (this.flash > 0.02) {
       ctx.fillStyle = `rgba(255,248,224,${this.flash * 0.8})`;

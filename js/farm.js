@@ -1,9 +1,9 @@
 import { fitCanvas, toLogical, hash } from './pixel.js';
 import { RainWindow } from './rainview.js';
 import { S, persist } from './state.js';
-import { CROPS, PLOT_COSTS } from './data.js';
+import { CROPS, DELIVERY_CONTACT } from './data.js';
 import { CROPS_SPR, ICONS } from './sprites.js';
-import { h, icon, showModal, toast, fmtTime } from './ui.js';
+import { h, icon, showModal, toast } from './ui.js';
 
 const LW = 144, LH = 208;
 const PW = 52, PH = 36;
@@ -11,9 +11,14 @@ const PLOTS = [[12, 62], [80, 62], [12, 100], [80, 100], [12, 138], [80, 138]];
 const SKY = { x: 56, y: 8, w: 32, h: 26 };
 const FLOOR = 180;
 
-export function cropProgress(plot, now = Date.now()) {
+export function cropProgress(plot) {
   if (!plot.crop) return 0;
-  return Math.min(1, (now - plot.planted) / (CROPS[plot.crop].time * 1000));
+  return Math.min(1, plot.nights / CROPS[plot.crop].nights);
+}
+
+// Called when you sleep: the leaky roof waters everything overnight.
+export function growOvernight() {
+  for (const p of S.plots) if (p.crop) p.nights = Math.min(CROPS[p.crop].nights, p.nights + 1);
 }
 
 export class Attic {
@@ -53,25 +58,24 @@ export class Attic {
     const plot = S.plots[i];
     if (i >= S.plotsOwned) return this.buyPlot(i);
     if (!plot.crop) return this.choosePlant(i);
-    const prog = cropProgress(plot);
-    if (prog >= 1) return this.harvest(i);
-    const left = CROPS[plot.crop].time * (1 - prog);
-    toast(`${CROPS[plot.crop].name}: ${fmtTime(left)} to go. The leaky roof is on it.`);
+    if (cropProgress(plot) >= 1) return this.harvest(i);
+    const left = CROPS[plot.crop].nights - plot.nights;
+    toast(`${CROPS[plot.crop].name}: ready after ${left} more night${left > 1 ? 's' : ''} of rain.`);
   }
 
   buyPlot(i) {
-    if (i !== S.plotsOwned) return toast('Clear the planter before this one first.');
-    const cost = PLOT_COSTS[i];
+    if (i !== S.plotsOwned) return toast('Build the planter before this one first.');
+    if (!S.mats.kit) return toast(`You need a planter kit. Call ${DELIVERY_CONTACT} tonight.`);
     showModal({
-      title: 'Clear a planter',
-      body: h('p', {}, 'Shift the junk, patch the box, add some soil. ', h('span', { class: 'cost' }, icon('coin'), ` ${cost}`)),
+      title: 'Build a planter',
+      body: h('p', {}, 'Unpack the kit, hammer it together, fill it with soil. ', h('span', { class: 'cost' }, icon('kit'), ' 1')),
       buttons: [
         { label: 'Not now' },
         {
-          label: `Clear it`, cls: 'primary', disabled: S.coins < cost,
+          label: 'Build it', cls: 'primary',
           onClick: () => {
-            S.coins -= cost; S.plotsOwned++; persist();
-            this.hooks.sfx('coin'); this.hooks.changed();
+            S.mats.kit--; S.plotsOwned++; persist();
+            this.hooks.sfx('plant'); this.hooks.changed();
           },
         },
       ],
@@ -83,20 +87,24 @@ export class Attic {
       h('div', { class: 'shop-row' },
         h('div', { class: 'shop-ico' }, icon(id, 'ico big')),
         h('div', { class: 'shop-info' },
-          h('b', {}, c.name),
-          h('small', {}, `${fmtTime(c.time)} · yields ${c.yield}`)),
+          h('b', {}, `${c.name} seeds ×${S.seeds[id]}`),
+          h('small', {}, `Ready after ${c.nights} night${c.nights > 1 ? 's' : ''} · yields ${c.yield}`)),
         h('button', {
-          class: 'btn small primary', disabled: S.coins < c.cost,
+          class: 'btn small primary', disabled: !S.seeds[id],
           onclick: () => { close(); this.plant(i, id); },
-        }, icon('coin'), ` ${c.cost}`)));
-    const close = showModal({ title: 'Plant seeds', body: h('div', { class: 'shop' }, rows), buttons: [{ label: 'Close' }] });
+        }, 'Plant')));
+    const none = !Object.values(S.seeds).some(Boolean);
+    const close = showModal({
+      title: 'Plant seeds',
+      body: h('div', {}, none && h('p', { class: 'note' }, `No seeds. ${DELIVERY_CONTACT} delivers them if you call tonight.`), h('div', { class: 'shop' }, rows)),
+      buttons: [{ label: 'Close' }],
+    });
   }
 
   plant(i, id) {
-    const c = CROPS[id];
-    if (S.coins < c.cost) return;
-    S.coins -= c.cost;
-    S.plots[i] = { crop: id, planted: Date.now() };
+    if (!S.seeds[id]) return;
+    S.seeds[id]--;
+    S.plots[i] = { crop: id, nights: 0 };
     persist();
     this.hooks.sfx('plant');
     this.hooks.changed();
@@ -105,10 +113,10 @@ export class Attic {
   harvest(i) {
     const plot = S.plots[i];
     const c = CROPS[plot.crop];
-    S.supplies[plot.crop] += c.yield;
+    S.crops[plot.crop] += c.yield;
     const [x, y] = PLOTS[i];
     this.floaters.push({ x: x + PW / 2, y: y + 8, crop: plot.crop, n: c.yield, life: 1 });
-    S.plots[i] = { crop: null, planted: 0 };
+    S.plots[i] = { crop: null, nights: 0 };
     persist();
     this.hooks.sfx('harvest');
     this.hooks.changed();
@@ -118,7 +126,7 @@ export class Attic {
   update() {
     for (let i = 0; i < S.plotsOwned; i++) {
       if (!S.plots[i].crop || cropProgress(S.plots[i]) >= 1) continue;
-      if (Math.random() < 0.006) {
+      if (Math.random() < 0.008) {
         const [x, y] = PLOTS[i];
         this.drips.push({ x: x + 10 + Math.floor(Math.random() * 3) * 16, y: 46, to: y + 24, v: 0.5, splash: 0 });
       }
@@ -170,7 +178,6 @@ export class Attic {
     if (Math.floor(now / 600) % 2) { R('#fff4e0', 71, 204, 2, 1); R('#fff4e0', 70, 203, 4, 1); }
 
     // planters
-    const t = Date.now();
     PLOTS.forEach(([x, y], i) => {
       const plot = S.plots[i];
       const owned = i < S.plotsOwned;
@@ -188,7 +195,7 @@ export class Attic {
         if (Math.floor(now / 700) % 2) { R('#a8d870', x + PW / 2 - 1, y + 14, 3, 1); R('#a8d870', x + PW / 2, y + 13, 1, 3); }
         return;
       }
-      const prog = cropProgress(plot, t);
+      const prog = cropProgress(plot);
       const spr = prog >= 1 ? CROPS_SPR[plot.crop] : prog >= 0.4 ? CROPS_SPR.young : CROPS_SPR.sprout;
       for (let k = 0; k < 3; k++) {
         const sway = prog >= 1 && Math.floor(now / 500 + k) % 4 === 0 ? 1 : 0;
