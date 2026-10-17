@@ -7,6 +7,7 @@ import { Bedroom } from './bedroom.js';
 import { mountCreator } from './creator.js';
 import { openPhone } from './phone.js';
 import { openWardrobe } from './wardrobe.js';
+import { mountArcade } from './arcade/arcade.js';
 import { GAMES, gameFor } from './minigames/index.js';
 import { perks, kid } from './hero.js';
 import { startBgRain } from './bgrain.js';
@@ -21,8 +22,8 @@ hydrateIcons();
 startBgRain($('#bgRain'));
 
 // ---------- screens ----------
-const screens = { create: $('#scr-create'), bedroom: $('#scr-bedroom'), cabin: $('#scr-cabin'), match: $('#scr-match'), farm: $('#scr-farm') };
-let current = null, creator = null;
+const screens = { create: $('#scr-create'), bedroom: $('#scr-bedroom'), cabin: $('#scr-cabin'), match: $('#scr-match'), farm: $('#scr-farm'), arcade: $('#scr-arcade') };
+let current = null, creator = null, arcade = null;
 
 const bedroom = new Bedroom($('#bedroomCanvas'), { sfx });
 const cabin = new Cabin($('#cabinCanvas'), {
@@ -30,6 +31,7 @@ const cabin = new Cabin($('#cabinCanvas'), {
   onLadder: () => show('farm'),
   onCat: () => sfx('purr'),
   onHero: () => sfx('sparkle'),
+  onArcade: openArcade,
 });
 const attic = new Attic($('#farmCanvas'), { sfx, onHatch: () => show('cabin'), changed: updateHud });
 const board = new Board($('#boardCanvas'), {
@@ -48,6 +50,7 @@ function show(name) {
   cabin.setActive(name === 'cabin');
   attic.setActive(name === 'farm');
   if (name !== 'match') board.stop();
+  if (name !== 'arcade' && arcade) { arcade.stop(); arcade = null; }
   updateHud();
 }
 
@@ -69,6 +72,7 @@ function updateHud() {
   $('#upBtn').classList.toggle('ping', ready);
   $('#soundBtn img').src = iconURL(S.sound ? 'sndOn' : 'sndOff');
   $('#sleepLabel').textContent = `Day ${S.day + 1}`;
+  $('#arcadeBtn').hidden = !S.arcade.owned;
 }
 
 function updateMatchHud(b) {
@@ -352,6 +356,12 @@ $('#downBtn').addEventListener('click', () => show('cabin'));
 $('#decorBtn').addEventListener('click', openDecor);
 $('#wardBtn').addEventListener('click', () => openWardrobe({ sfx, changed: updateHud, onMirror: () => { $('#modal').hidden = true; openCreator(true); } }));
 $('#sleepBtn').addEventListener('click', goToSleep);
+$('#arcadeBtn').addEventListener('click', openArcade);
+
+function openArcade() {
+  show('arcade');
+  arcade = mountArcade({ sfx, changed: updateHud, onExit: () => { arcade = null; show('cabin'); } });
+}
 
 // ---------- decorating ----------
 const canAfford = d => Object.entries(d.need).every(([k, n]) => have(k) >= n);

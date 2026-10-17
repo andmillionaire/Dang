@@ -24,7 +24,7 @@ const MOM = [
 ];
 
 const kitPrice = () => KIT_COSTS[S.plotsOwned + S.mats.kit] ?? null;
-const priceOf = item => (item.id === 'kit' ? kitPrice() : item.price);
+const priceOf = item => (item.id === 'kit' ? kitPrice() : item.id === 'arcade' && S.arcade.owned ? null : item.price);
 
 export function openPhone({ sfx, changed }) {
   const screen = h('div', { class: 'phone-screen' });
@@ -64,7 +64,7 @@ export function openPhone({ sfx, changed }) {
     const order = h('button', { class: 'btn primary', onclick: () => place(cart, total()) }, 'Place order');
     const rows = CATALOG.map(it => {
       const qty = h('span', { class: 'qty' }, '0');
-      const max = it.id === 'kit' ? (kitPrice() === null ? 0 : 1) : 20;
+      const max = it.id === 'kit' || it.id === 'arcade' ? (priceOf(it) === null ? 0 : 1) : 20;
       const step = d => {
         const next = Math.max(0, Math.min(max, (cart[it.id] || 0) + d));
         if (d > 0 && total() + (priceOf(it) || 0) > S.coins) { sfx('nope'); return; }
@@ -78,7 +78,7 @@ export function openPhone({ sfx, changed }) {
         icon(it.icon, 'ico big'),
         h('div', { class: 'shop-info' },
           h('b', {}, it.name),
-          h('small', {}, price === null ? 'Sold out: the attic is full' : it.note)),
+          h('small', {}, price === null ? (it.id === 'arcade' ? 'Already in your cabin' : 'Sold out: the attic is full') : it.note)),
         h('span', { class: 'cost' }, icon('coin'), price === null ? '–' : price),
         h('div', { class: 'stepper small' },
           h('button', { class: 'arrow', 'aria-label': `Fewer ${it.name}`, onclick: () => step(-1) }, '−'),
@@ -101,7 +101,8 @@ export function openPhone({ sfx, changed }) {
     S.coins -= cost;
     for (const [id, q] of Object.entries(cart)) {
       if (!q) continue;
-      if (id.startsWith('seed:')) S.seeds[id.slice(5)] += q;
+      if (id === 'arcade') S.arcade.owned = true;
+      else if (id.startsWith('seed:')) S.seeds[id.slice(5)] += q;
       else S.mats[id] += q;
     }
     persist();
@@ -111,7 +112,7 @@ export function openPhone({ sfx, changed }) {
     await sleep(1400);
     if ($('#modal').contains(screen)) close();
     sfx('doorbell');
-    toast('Ding-dong! A soggy box is on the porch. Supplies added.');
+    toast(cart.arcade ? 'Ding-dong! Two very damp delivery drones wheel in an arcade cabinet!' : 'Ding-dong! A soggy box is on the porch. Supplies added.');
   }
 
   contacts();

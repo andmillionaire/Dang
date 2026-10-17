@@ -363,6 +363,16 @@ export const ICON_ROWS = {
     '.kfffk..',
     '.kkkkk..',
   ],
+  arcade: [
+    '.kkkkkk.',
+    'kffffffk',
+    'kpuuuupk',
+    'kpuyuupk',
+    'kpuuuupk',
+    'kpkfkypk',
+    'kppppppk',
+    'kkkkkkkk',
+  ],
   heart: [
     '........',
     '.rr.rr..',

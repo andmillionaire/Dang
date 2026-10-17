@@ -1,0 +1,5 @@
+{
+  "name": "dang-server",
+  "private": true,
+  "type": "module"
+}

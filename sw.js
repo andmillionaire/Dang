@@ -1,10 +1,39 @@
 // Offline-first service worker. Bump VERSION whenever app files change.
-const VERSION = 'dang-v1';
+const VERSION = 'dang-v2';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
-  'js/main.js', 'js/state.js', 'js/data.js', 'js/ui.js', 'js/audio.js', 'js/pixel.js',
-  'js/sprites.js', 'js/spritedata.js', 'js/bgrain.js', 'js/rainview.js',
-  'js/match3.js', 'js/cabin.js', 'js/farm.js',
+  'js/arcade/arcade.js',
+  'js/arcade/levels.js',
+  'js/audio.js',
+  'js/bedroom.js',
+  'js/bgrain.js',
+  'js/cabin.js',
+  'js/creator.js',
+  'js/data.js',
+  'js/farm.js',
+  'js/hero.js',
+  'js/herodata.js',
+  'js/leaderboard.js',
+  'js/main.js',
+  'js/match3.js',
+  'js/minigames/cattactoe.js',
+  'js/minigames/common.js',
+  'js/minigames/crossword.js',
+  'js/minigames/index.js',
+  'js/minigames/mewdoku.js',
+  'js/minigames/peggle.js',
+  'js/minigames/tictacclue.js',
+  'js/minigames/tictactoe.js',
+  'js/phone.js',
+  'js/pixel.js',
+  'js/rainview.js',
+  'js/spritedata.js',
+  'js/sprites.js',
+  'js/state.js',
+  'js/sudoku.js',
+  'js/sudokuboard.js',
+  'js/ui.js',
+  'js/wardrobe.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png',
 ];
 
@@ -25,6 +54,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (url.pathname.includes('/api/')) return; // leaderboard is always live
   const cacheable = url.origin === location.origin || /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
   if (!cacheable) return;
   e.respondWith(caches.open(VERSION).then(async cache => {

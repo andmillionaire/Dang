@@ -188,7 +188,7 @@ export class Attic {
       R('#2e1c12', x + 3, y + 24, PW - 6, 3);
       ctx.globalAlpha = 1;
       if (!owned) {
-        if (i === S.plotsOwned) ctx.drawImage(ICONS.lock, x + PW / 2 - 4, y + 8);
+        if (i === S.plotsOwned) ctx.drawImage(S.mats.kit ? ICONS.kit : ICONS.lock, x + PW / 2 - 4, y + 8);
         return;
       }
       if (!plot.crop) {

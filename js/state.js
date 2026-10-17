@@ -20,6 +20,8 @@ const fresh = () => ({
   plotsOwned: 1,
   wardrobe: { owned: { casual: true }, equip: { head: null, outfit: 'casual', held: null, brooch: null } },
   stats: { miniWins: 0, blasts: 0 },
+  arcade: { owned: false, sudoku: { unlocked: 1, best: {} } },
+  playerId: null,
   seen: {},
   sound: true,
 });
@@ -35,7 +37,8 @@ function migrate(saved) {
     delete s.supplies;
     delete s.farmUnlocked;
   }
-  for (const k of ['today', 'crops', 'seeds', 'mats', 'stats', 'wardrobe']) s[k] = { ...base[k], ...s[k] };
+  for (const k of ['today', 'crops', 'seeds', 'mats', 'stats', 'wardrobe', 'arcade']) s[k] = { ...base[k], ...s[k] };
+  s.arcade.sudoku = { ...base.arcade.sudoku, ...s.arcade.sudoku };
   s.wardrobe.equip = { ...base.wardrobe.equip, ...s.wardrobe.equip };
   s.v = 2;
   return s;

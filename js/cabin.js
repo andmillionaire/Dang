@@ -2,6 +2,7 @@ import { fitCanvas, toLogical, hash } from './pixel.js';
 import { RainWindow } from './rainview.js';
 import { S } from './state.js';
 import { drawHero, fullSaturn, W as HW } from './hero.js';
+import { GIRLS } from './sprites.js';
 
 const LW = 144, LH = 208;
 const WX = 48, WY = 26, WW = 48, WH = 56;
@@ -20,6 +21,7 @@ export class Cabin {
     canvas.addEventListener('pointerdown', e => {
       const p = toLogical(canvas, LW, LH, e);
       if (p.x >= HERO.x - 2 && p.x <= HERO.x + HW + 2 && p.y >= HERO.y - 4 && p.y <= HERO.y + 28) { this.sparkleAt = performance.now(); hooks.onHero(); }
+      else if (S.arcade.owned && p.x >= 114 && p.x <= 142 && p.y >= 140 && p.y <= 200) hooks.onArcade();
       else if (p.x >= 108 && p.x <= 138 && p.y < FLOOR) hooks.onLadder();
       else if (S.decor.catbed && p.x >= 58 && p.x <= 90 && p.y >= 160) { this.purrUntil = performance.now() + 1500; hooks.onCat(); }
       else if (p.x >= WX && p.x <= WX + WW && p.y >= WY && p.y <= WY + WH) this.win.strike();
@@ -201,15 +203,27 @@ export class Cabin {
     }
 
     if (D.fern) {
-      R('#a0663a', 122, 174, 10, 10); R('#6b3d22', 122, 174, 10, 2); R('#6b3d22', 123, 184, 8, 2);
+      R('#a0663a', 8, 174, 10, 10); R('#6b3d22', 8, 174, 10, 2); R('#6b3d22', 9, 184, 8, 2);
       const leaves = [[-6, -10], [-4, -14], [0, -16], [4, -14], [7, -9], [-8, -5], [9, -4]];
       for (const [dx, dy] of leaves) {
         const sway = Math.round(Math.sin(now / 1200 + dx) * 0.6);
         for (let k = 0; k <= 8; k++) {
-          const x = 127 + Math.round((dx * k) / 8) + (k > 4 ? sway : 0), y = 174 + Math.round((dy * k) / 8);
+          const x = 13 + Math.round((dx * k) / 8) + (k > 4 ? sway : 0), y = 174 + Math.round((dy * k) / 8);
           R(k % 2 ? '#6fb04a' : '#3d7a34', x, y, 1, 1);
         }
       }
+    }
+
+    if (S.arcade.owned) {
+      const blink = Math.floor(now / 400) % 2;
+      R('#2a1840', 116, 146, 24, 52); R('#4a2468', 118, 148, 20, 48);
+      R('#e86aa8', 116, 142, 24, 7); R(blink ? '#ffe27a' : '#fff4e0', 118, 144, 2, 2); R(blink ? '#fff4e0' : '#ffe27a', 136, 144, 2, 2);
+      R('#1a1220', 120, 152, 16, 14); R('#24305a', 121, 153, 14, 12);
+      ctx.drawImage(GIRLS[Math.floor(now / 1500) % GIRLS.length], 122, 153);
+      R('#6a3e94', 118, 168, 20, 6); R('#1a1220', 122, 165, 1, 4); R('#d0463c', 121, 164, 3, 2);
+      R(blink ? '#4f8fd0' : '#9fd3f2', 128, 170, 2, 2); R(blink ? '#f08ab0' : '#d0463c', 132, 170, 2, 2);
+      R('#2a1840', 120, 176, 16, 1); R('#1a1220', 116, 196, 24, 2);
+      R(`rgba(160,200,255,${0.08 + 0.04 * blink})`, 112, 148, 32, 30);
     }
 
     if (D.catbed) {
