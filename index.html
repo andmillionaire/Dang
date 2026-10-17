@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1b1424">
+<meta name="description" content="A cozy pixel match-3 set in a rainy cabin. Big matches only go off if you beat the storm at tic-tac-toe.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dang">
+<title>Dang: Rainy Cabin</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="bgRain" aria-hidden="true"></canvas>
+<div id="app">
+  <header id="hud">
+    <div class="res coin"><img data-icon="coin"><span id="coins">0</span></div>
+    <div id="supplies" class="supplies" hidden></div>
+    <div class="hud-right">
+      <button id="installBtn" class="chip" hidden>Install</button>
+      <button id="soundBtn" class="chip" aria-label="Toggle sound"><img data-icon="sndOn"></button>
+    </div>
+  </header>
+
+  <main>
+    <section id="scr-cabin" class="screen">
+      <div class="stage"><canvas id="cabinCanvas" aria-label="Your rainy cabin"></canvas></div>
+      <nav class="actions">
+        <button id="playBtn" class="btn primary big">Play <small id="playLvl">Level 1</small></button>
+        <div class="row">
+          <button id="decorBtn" class="btn">Decorate</button>
+          <button id="upBtn" class="btn">Upstairs</button>
+        </div>
+      </nav>
+    </section>
+
+    <section id="scr-match" class="screen">
+      <div class="match-hud">
+        <div class="mh-row">
+          <span id="mLevel" class="pill">Level 1</span>
+          <span class="pill"><b id="mMoves">20</b>&nbsp;moves</span>
+          <span id="mBlastPill" class="pill"><img data-icon="bolt">&nbsp;<b id="mBlasts">0/1</b></span>
+        </div>
+        <div class="bar"><div id="mBar"></div><span id="mScore">0 / 1000</span></div>
+      </div>
+      <div class="stage"><canvas id="boardCanvas" aria-label="Puzzle board"></canvas></div>
+      <div class="match-foot">
+        <button id="quitBtn" class="btn small">Cabin</button>
+        <p class="tip">Match <b>5+</b> to charge a <img data-icon="bolt"> Storm Blast</p>
+      </div>
+    </section>
+
+    <section id="scr-farm" class="screen">
+      <div class="stage"><canvas id="farmCanvas" aria-label="Attic farm"></canvas></div>
+      <nav class="actions">
+        <p class="tip">Tap a planter. The leaky roof does the watering.</p>
+        <button id="downBtn" class="btn">Downstairs</button>
+      </nav>
+    </section>
+  </main>
+</div>
+
+<div id="modal" class="overlay" hidden></div>
+
+<div id="ttt" class="overlay" hidden>
+  <div class="panel ttt-panel">
+    <h2><img data-icon="bolt"> Storm charged!</h2>
+    <p class="muted">Beat the storm at tic-tac-toe to set off your blast.</p>
+    <div id="tttGrid" class="ttt-grid"></div>
+    <p id="tttStatus" class="status">Your move</p>
+    <p id="tttRound" class="muted small"></p>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
