@@ -37,6 +37,7 @@ Bigger match shapes leave a charged tile on the board. Tap it and the board morp
 | 5 in a row | Star Pegs (Peggle-style) | every tile of the most common colour |
 | L, T or + | Mewdoku (cat region puzzle) | 5×5 area |
 | 2×2 box | Word Square | both diagonals |
+| a **Dang!** chain reaction | Micro Rush (WarioWare-style) | 3×3 zap + 8 lightning strikes |
 
 You start small and the game opens up as you go:
 
@@ -47,7 +48,8 @@ You start small and the game opens up as you go:
 | 3 | 7×7, 5 colours | L / T / + → Mewdoku |
 | 4 | 7×8 | 2×2 box → Word Square |
 | 5 | 7×9 | 5 in a row → Star Pegs |
-| 6+ | 7×9, 6 colours from level 8 | mashups; targets, moves and blasts keep climbing |
+| 6 | 7×9 | mashups |
+| 7+ | 7×9, 6 colours from level 8 | chain reactions leave a Dang! tile; targets, moves and blasts keep climbing |
 
 Shapes you haven't unlocked yet just match normally. Each unlock gets a "New!" card the first time.
 
@@ -60,9 +62,19 @@ Swipe two charged tiles together for a **mashup**. These are fused games, not re
 | Word-Tac-Toe | Place letters from your tray on the 3×3 grid. The first to make a real 3-letter word along any line wins. |
 | Cat Pegs | A Mewdoku grid sits under the bins. Pick a row, shoot, and the bin the ball lands in picks the column for your cat. |
 | Letter Pegs | Hit the letter pegs in spelling order to answer a clue. Hitting the wrong letters costs a ball. |
+| Micro-Tac-Toe | Every square hides a microgame. Win it and your ✕ goes there; lose and the storm steals the square. |
+| Peg Rush | Every shot comes with an order ("Hit 2 orange!", "Catch it!", "Blue only!") and 5 seconds to fire. |
+| Cat Snap | Mewdoku against the fuse: a row lights up and you have 5 seconds to tap where its cat goes. |
+| Word Rush | Rapid 5-second word microgames: unscramble, fill the gap, spot the real word, answer the clue, type it out. |
 | Word Mewdoku | Each colour has a letter. Read top to bottom, the cats spell the clue's answer, so solving the clue tells you which colour each row's cat is in. |
 
 Two of the same kind give a *Supercharged* version that clears the whole board. Chain reactions call out **Dang!**, then Lovely!, Magical!, Spellbinding!. Every level needs points **and** blasts, so some days the storm just wins.
+
+## Micro Rush
+
+The first link of a chain reaction (the **Dang!** callout) leaves a Dang! tile behind, at most two on the board at a time. Tap it for Micro Rush: 4 to 6 WarioWare-style microgames in a row, each with a one-line command and a 5-second fuse, and each a little faster than the last. You have 3 hearts (Catnip Tea adds one).
+
+The microgames are: Patch it! (tape the roof leaks), Pop 'em!, Stop! (needle in the gold), Stoke it! (mash to light the fire), Find it! (the odd cat out), How many?, Catch! (bucket under the drips), Stay dry!, Swat!, Shh! (don't touch anything), Light 'em! (candles in order), Match! and Shut it! (drag the curtain). They live in `js/minigames/micro.js`; each one is a small `setup(api)` function, so adding more is easy.
 
 ## Mewdoku rules (mini-game and arcade)
 
@@ -116,7 +128,7 @@ Open the HTTPS site on a phone: tap **Install** (Android/Chrome) or Share → *A
 | --- | --- |
 | `js/main.js` | Screens and the day/night loop, rewards, decorating, install prompt |
 | `js/match3.js` | Board: matching (lines, L/T, 2×2 boxes), charged tiles, mashups, blasts, cascades |
-| `js/minigames/` | Tic-Tac-Toe, Star Pegs (+ Peg-Tac-Toe, Letter Pegs, Cat Pegs), Mewdoku (+ Word Mewdoku), Word Square, Cat-Tac-Toe, Word-Tac-Toe; `index.js` maps tiles and pairs to games |
+| `js/minigames/` | Tic-Tac-Toe, Star Pegs (+ Peg-Tac-Toe, Letter Pegs, Cat Pegs), Mewdoku (+ Word Mewdoku), Word Square, Cat-Tac-Toe, Word-Tac-Toe, Micro Rush (+ Word Rush), Micro-Tac-Toe, Cat Snap; `index.js` maps tiles and pairs to games |
 | `js/meowdoku-engine.js`, `js/meowdokuboard.js` | Mewdoku generator, uniqueness and logic solvers, and the playable board |
 | `js/arcade/` | Magical Mewdoku: pre-generated levels and the arcade screen |
 | `tools/` | Icon and Mewdoku level generators |

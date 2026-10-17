@@ -542,6 +542,20 @@ export const SPECIAL_ROWS = {
     'kCCCCCCCCCCk',
     'kkkkkkkkkkkk',
   ],
+  micro: [
+    'kkkkkkkkkkkk',
+    'kqqqqqqyykqk',
+    'kqqqqqyykqqk',
+    'kqqqqyykqqqk',
+    'kqqqyyykqqqk',
+    'kqqyyyyyyyqk',
+    'kqqqkyyykqqk',
+    'kqqqqyykqqqk',
+    'kqqqyykqqqqk',
+    'kqqyykqqqqqk',
+    'kqqykqqqqqqk',
+    'kkkkkkkkkkkk',
+  ],
 };
 
 // ---------- arcade Mewdoku: magical-girl portraits (12x12) ----------

@@ -41,12 +41,14 @@ const clearAround = (pegs, special, gap) => pegs.filter(p => special.every(s => 
 //  'ttt'  Peg-Tac-Toe: 9 bins along the bottom are the 9 squares; where the ball lands is where your X goes.
 //  'word' Letter Pegs: hit the letters in spelling order to answer the clue.
 //  'cats' Cat Pegs: a Mewdoku board under 5 bins; tap a row, then land the ball in the right column.
+//  'rush' Peg Rush: every shot is a WarioWare-style order ("Hit 2 orange!") with 5 seconds to fire.
 export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
   const TITLES = {
     pegs: ['Star Pegs', 'Drag to aim, let go to shoot. Clear every orange peg.'],
     ttt: ['Peg-Tac-Toe', 'The 9 bins are the 9 squares. Where your ball lands, your X goes. Get three in a row before the storm!'],
     word: ['Letter Pegs', 'Hit the letters in spelling order to answer the clue. Wrong letters cost a ball.'],
     cats: ['Cat Pegs', 'Tap a row of the board, then shoot: the bin your ball lands in is the column your cat goes in. Mewdoku rules!'],
+    rush: ['Peg Rush', 'Every shot comes with an order. Read it, aim, and fire within 5 seconds. Miss the order and you lose a heart.'],
   };
   const ui = mount(root, { title: TITLES[mode][0], tip: TITLES[mode][1] });
   const LH = mode === 'cats' ? 214 : 156;
@@ -79,6 +81,9 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
     const special = letters.map((l, i) => ({ ...spots[i], r: 3.5, kind: l.real ? 'letter' : 'decoy', ch: l.ch }));
     pegs = [...clearAround(scatter(130), special, 10), ...special];
     balls += 2;
+  } else if (mode === 'rush') {
+    pegs = scatter(130);
+    shuffle(pegs.slice()).slice(0, 12).forEach(p => (p.kind = 'orange'));
   } else {
     pegs = scatter(130);
     const n = Math.min(6 + Math.round(d * 4), pegs.length >> 1);
@@ -94,21 +99,46 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
   const orangeLeft = () => pegs.filter(p => p.kind === 'orange' && !p.gone && !p.lit).length;
   const nextLetter = () => word && word.word[word.got.length];
 
+  // Peg Rush orders, checked when the shot ends.
+  const many = 3 + Math.round(d * 2);
+  const ORDERS = [
+    { text: `Hit ${many} pegs!`, ok: s => s.hits >= many },
+    { text: 'Hit orange!', ok: s => s.orange >= 1, orange: 1 },
+    { text: 'Hit 2 orange!', ok: s => s.orange >= 2, orange: 2 },
+    { text: 'Catch it!', ok: s => s.how === 'bucket' },
+    { text: 'Blue only!', ok: s => s.hits >= 2 && s.orange === 0 },
+  ];
+  const rush = mode === 'rush' ? { need: 3 + Math.round(d * 2), passed: 0, max: 3 + (boost === 'tea' || boost === 'snack' ? 1 : 0), lives: 0, order: null, clock: 0 } : null;
+  if (rush) rush.lives = rush.max;
+  let shotOrange = 0;
+
   // the tic-tac-toe board, shown above the canvas for Peg-Tac-Toe
   const tttCells = mode === 'ttt' ? Array.from({ length: 9 }, (_, i) => h('span', { class: 'pt-cell' }, String(i + 1))) : null;
   if (tttCells) ui.body.prepend(h('div', { class: 'pt-board' }, tttCells));
   if (mode === 'word') ui.body.prepend(h('p', { class: 'cw-clue' }, h('b', {}, 'Clue: '), word.clue));
 
+  function newOrder() {
+    const ok = ORDERS.filter(o => o !== rush.order && (!o.orange || orangeLeft() >= o.orange + 1));
+    rush.order = ok[(Math.random() * ok.length) | 0];
+    rush.clock = 0;
+    callout = { text: rush.order.text, t: 0 };
+    ui.status(`${rush.order.text} Fire within 5 seconds!`);
+    updateInfo();
+  }
+
   function updateInfo() {
     const stats = [h('span', { class: 'mg-stat' }, h('i', { class: 'dot ball' }), ` ${balls} balls`)];
     if (mode === 'pegs') stats.unshift(h('span', { class: 'mg-stat' }, h('i', { class: 'dot orange' }), ` ${orangeLeft()} orange left`));
     if (mode === 'word') stats.unshift(h('span', { class: 'mg-stat word-slots' }, [...word.word].map((ch, i) => h('b', { class: i === word.got.length ? 'next' : '' }, i < word.got.length ? ch : '_'))));
+    if (rush) stats.splice(0, 1, h('span', { class: 'mg-stat' }, Array.from({ length: rush.max }, (_, i) => icon(i < rush.lives ? 'heart' : 'heartOff'))),
+      h('span', { class: 'mg-stat' }, `${rush.passed} / ${rush.need} orders`), rush.order && h('span', { class: 'mg-stat order' }, rush.order.text));
     if (mode === 'cats') stats.unshift(h('span', { class: 'mg-stat' }, Array.from({ length: 3 + (boost === 'tea' ? 1 : 0) }, (_, i) => icon(i < md.hearts ? 'heart' : 'heartOff'))));
     ui.info.replaceChildren(...stats);
     if (tttCells) board.forEach((m, i) => { tttCells[i].textContent = m === 'X' ? '✕' : m === 'O' ? '○' : String(i + 1); tttCells[i].className = 'pt-cell' + (m ? ' ' + m : ''); });
   }
+  if (rush) newOrder();
   updateInfo();
-  ui.status(mode === 'cats' ? 'Tap a row of the board to choose where your cat goes.' : 'Aim with your finger.');
+  if (!rush) ui.status(mode === 'cats' ? 'Tap a row of the board to choose where your cat goes.' : 'Aim with your finger.');
 
   return new Promise(resolve => {
     requestAnimationFrame(() => { ctx = fitCanvas(canvas, LW, LH).ctx; loop(); });
@@ -140,7 +170,8 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
     });
 
     function fire() {
-      balls--;
+      if (!rush) balls--;
+      shotOrange = 0;
       shotFrames = 0; slowFrames = 0; hits = 0; landed = -1;
       if (md) md.rowShot = md.row;
       ball = { x: LAUNCH.x + Math.cos(aim) * 6, y: LAUNCH.y + Math.sin(aim) * 6, vx: Math.cos(aim) * SPEED, vy: Math.sin(aim) * SPEED };
@@ -160,6 +191,7 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
         sfx('type');
       }
       hits++;
+      if (p.kind === 'orange') shotOrange++;
       if (p.kind !== 'decoy') sfx('peg', hits);
       return true;
     }
@@ -233,6 +265,7 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
     async function endShot(how) {
       ball = null;
       clearLit();
+      if (rush) return rushEnd(rush.order.ok({ hits, orange: shotOrange, how }) ? '' : `Order missed: ${rush.order.text}`);
       if (how === 'bucket') {
         balls++; bucketFlash = 1; callout = { text: 'Free ball!', t: 0 }; sfx('coin'); ui.status('Caught in the bucket: free ball!');
       } else if (how === 'bin' && mode === 'ttt') {
@@ -263,6 +296,17 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
       if (balls <= 0) return finish('lose', 'Out of balls.');
     }
 
+    // One order done (msg is empty) or failed (msg says why).
+    function rushEnd(msg) {
+      if (!msg) { rush.passed++; callout = { text: 'Done!', t: 0 }; sfx('coin'); bucketFlash = 0.6; }
+      else { rush.lives--; callout = { text: 'Oops!', t: 0 }; sfx('nope'); ui.status(`${msg} −1 heart`); }
+      updateInfo();
+      if (rush.passed >= rush.need) return finish('win', 'Every order filled!');
+      if (rush.lives <= 0) return finish('lose', 'Out of hearts.');
+      setTimeout(() => !done && newOrder(), 700);
+      rush.clock = -0.7;
+    }
+
     async function finish(res, msg) {
       done = true;
       sfx(res === 'win' ? 'tttwin' : 'tttlose');
@@ -279,6 +323,10 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
       if (callout) callout.t++;
       binFlash.t++;
       bucketFlash *= 0.92;
+      if (rush && !ball && !done) {
+        rush.clock += 1 / 60;
+        if (rush.clock >= 5) { rush.clock = -99; rushEnd('Too slow!'); }
+      }
       if (!ball) { trail.length = 0; return; }
       trail.push({ x: ball.x, y: ball.y });
       if (trail.length > 10) trail.shift();
@@ -382,6 +430,12 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
       ctx.fillStyle = '#fff4e0';
       ctx.fillRect(Math.round(LAUNCH.x + Math.cos(aim) * 7), Math.round(LAUNCH.y + Math.sin(aim) * 7), 1, 1);
 
+      if (rush && !ball && rush.clock >= 0) {
+        // the 5-second fuse along the top
+        const left = 1 - rush.clock / 5;
+        ctx.fillStyle = left < 0.3 && Math.floor(frame / 6) % 2 ? '#d0463c' : '#ffe27a';
+        ctx.fillRect(0, 0, Math.round(LW * left), 2);
+      }
       if (bins) drawBins();
       else {
         const bx = Math.round(bucketX());

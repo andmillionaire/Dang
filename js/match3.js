@@ -354,9 +354,12 @@ export class Board {
       combo++;
       const clear = [], sucks = [];
       let pts = 0;
+      // The first link of a chain reaction ("Dang!") leaves a Dang! tile behind.
+      let dang = combo === 2 && this.cfg.kinds?.includes('micro') && this.grid.flat().filter(t => t && t.sp === 'micro').length < 2;
       for (const g of groups) {
         pts += g.cells.length * 10 * combo + Math.max(0, g.cells.length - 3) * 20;
-        const kind = kindOf(g, this.cfg.kinds);
+        let kind = kindOf(g, this.cfg.kinds);
+        if (!kind && dang) { kind = 'micro'; dang = false; }
         let keep = null;
         if (kind) {
           keep = (combo === 1 && origins.find(o => g.cells.some(p => key(p) === key(o)))) || g.cells[Math.floor(g.cells.length / 2)];
@@ -415,6 +418,13 @@ export class Board {
       } else if (k === 'cw') {
         for (let d = -ROWS; d <= ROWS; d++) { add(at.r + d, at.c + d); add(at.r + d, at.c - d); }
         if (big) for (let c = 0; c < COLS; c++) add(at.r, c);
+      } else if (k === 'micro') {
+        // a 3x3 zap where it sits, plus lightning on random tiles
+        const rad = big ? 2 : 1;
+        for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) add(at.r + dr, at.c + dc);
+        const rest = [];
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (this.grid[r][c] && !this.grid[r][c].sp) rest.push({ r, c });
+        rest.sort(() => Math.random() - 0.5).slice(0, big ? 12 : 8).forEach(p => add(p.r, p.c));
       } else if (k === 'pegs') {
         const counts = {};
         for (const t of this.grid.flat()) if (t && !t.sp) counts[t.t] = (counts[t.t] || 0) + 1;
