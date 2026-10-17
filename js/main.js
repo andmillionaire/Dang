@@ -16,11 +16,13 @@ import { sleep } from './pixel.js';
 import * as audio from './audio.js';
 import { $, h, icon, hydrateIcons, showModal, toast } from './ui.js';
 import { iconURL } from './sprites.js';
+import { VERSION } from './version.js';
 
 const sfx = audio.sfx;
 audio.setSound(S.sound);
 hydrateIcons();
 startBgRain($('#bgRain'));
+$('#version').textContent = `v${VERSION}`;
 
 // ---------- screens ----------
 const screens = { create: $('#scr-create'), bedroom: $('#scr-bedroom'), cabin: $('#scr-cabin'), match: $('#scr-match'), farm: $('#scr-farm'), arcade: $('#scr-arcade') };

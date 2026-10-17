@@ -1,5 +1,5 @@
 // Offline-first service worker. Bump VERSION whenever app files change.
-const VERSION = 'dang-v4';
+const VERSION = 'dang-0.6.0'; // keep in step with js/version.js
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/arcade/arcade.js',
@@ -34,6 +34,7 @@ const SHELL = [
   'js/sudoku.js',
   'js/sudokuboard.js',
   'js/ui.js',
+  'js/version.js',
   'js/vn.js',
   'js/wardrobe.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png',

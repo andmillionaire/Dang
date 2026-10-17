@@ -457,3 +457,8 @@ main { flex: 1; min-height: 0; position: relative; }
 .vn-extra .name-input { width: 100%; }
 .vn-suggest { display: flex; flex-wrap: wrap; gap: 8px; }
 .vn-suggest .chip { font-size: 18px; }
+
+#version {
+  position: fixed; left: calc(env(safe-area-inset-left, 0px) + 6px); bottom: calc(var(--safe-b) + 1px); z-index: 40;
+  font-size: 13px; line-height: 1; color: var(--muted); opacity: .55; pointer-events: none;
+}
