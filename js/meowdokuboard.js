@@ -18,7 +18,7 @@ export const decode = ([regions, solution, locked]) => ({
 // - placing a piece that breaks a rule costs a heart (and isn't placed)
 // - Undo, Restart, and a hint that points at a square worth checking
 // piece(region) -> Node for a placed piece. onDone('win' | 'lose').
-export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, onDone, pieceName = 'cat' }) {
+export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, onDone, pieceName = 'cat', regionLabel }) {
   const { N, regions, solution } = puzzle;
   const NN = N * N;
   const lockedCell = puzzle.locked == null ? -1 : puzzle.locked * N + solution[puzzle.locked];
@@ -78,11 +78,12 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
       b.classList.toggle('has', cat[i]);
       b.classList.toggle('hint', i === hintCell);
       b.replaceChildren(cat[i] ? piece(regions[i]) : mark[i] ? h('span', { class: 'md-x' }, '✕') : ruledOut ? h('span', { class: 'md-dot' }) : '');
+      if (regionLabel && !cat[i]) b.append(h('span', { class: 'md-lab' }, regionLabel(regions[i])));
     });
     help.textContent = mode === 'mark'
       ? `Tap to mark ✕ · double-tap to place a ${pieceName} · tap a ${pieceName} to pick it up`
       : `Tap to place a ${pieceName} · tap a ${pieceName} to pick it up`;
-    onChange && onChange({ ...state, lives: lives - state.mistakes, left: N - placed.length });
+    onChange && onChange({ ...state, lives: lives - state.mistakes, left: N - placed.length, placed });
   }
 
   function clearHint() { hintCell = -1; clearTimeout(hintTimer); }

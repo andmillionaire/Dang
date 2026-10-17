@@ -3,7 +3,7 @@ import * as pegs from './peggle.js';
 import * as mew from './mewdoku.js';
 import * as cw from './crossword.js';
 import * as catTac from './cattactoe.js';
-import * as clue from './tictacclue.js';
+import * as wtt from './wordtactoe.js';
 
 // One mini-game per charged tile. `shape` is the match that makes it.
 export const GAMES = {
@@ -13,20 +13,14 @@ export const GAMES = {
   cw:   { key: 'cw', name: 'Word Square', shape: '2×2 box',         blast: 'clears both diagonals', play: o => cw.play(o.root, o) },
 };
 
-// Wordoku needs a 4-letter answer with no repeated letters.
-const pickWord = () => {
-  const ok = cw.WORDS.filter(w => w.word.length === 4 && new Set(w.word).size === 4);
-  return ok[(Math.random() * ok.length) | 0];
-};
-
 // Two different charged tiles swapped together.
 export const MASHUPS = {
   'pegs+ttt': { key: 'pegs+ttt', name: 'Peg-Tac-Toe',  play: o => pegs.play(o.root, { ...o, mode: 'ttt' }) },
   'mew+ttt':  { key: 'mew+ttt', name: 'Cat-Tac-Toe',  play: o => catTac.play(o.root, o) },
-  'cw+ttt':   { key: 'cw+ttt', name: 'Tic-Tac-Clue', play: o => clue.play(o.root, o) },
+  'cw+ttt':   { key: 'cw+ttt', name: 'Word-Tac-Toe', play: o => wtt.play(o.root, o) },
   'mew+pegs': { key: 'mew+pegs', name: 'Cat Pegs',     play: o => pegs.play(o.root, { ...o, mode: 'cats' }) },
   'cw+pegs':  { key: 'cw+pegs', name: 'Letter Pegs',  play: o => pegs.play(o.root, { ...o, mode: 'word' }) },
-  'cw+mew':   { key: 'cw+mew', name: 'Wordoku',      play: o => mew.play(o.root, { ...o, wordoku: pickWord() }) },
+  'cw+mew':   { key: 'cw+mew', name: 'Word Mewdoku', play: o => mew.play(o.root, { ...o, wordoku: true }) },
 };
 
 // The game for one tile, or a mashup for two. Two of the same kind play a supercharged version.

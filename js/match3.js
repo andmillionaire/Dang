@@ -1,23 +1,25 @@
 import { fitCanvas, toLogical, sleep, tween, ease } from './pixel.js';
 import { TILES, TILES_WHITE, TILES_GREY, TILE_COLORS, SPECIALS } from './sprites.js';
 
-export const COLS = 7, ROWS = 9;
 const CELL = 14, PAD = 4;
-const LW = COLS * CELL + PAD * 2, LH = ROWS * CELL + PAD * 2;
+// The board grows as you progress, so its size is set per level in start().
+let COLS = 7, ROWS = 9, LW = COLS * CELL + PAD * 2, LH = ROWS * CELL + PAD * 2;
 
 const inBounds = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
 const key = p => p.r * COLS + p.c;
 const cx = c => PAD + c * CELL + CELL / 2, cy = r => PAD + r * CELL + CELL / 2;
-const COMBO_WORDS = ['', '', 'Nice!', 'Lovely!', 'Magical!', 'Spellbinding!'];
+const COMBO_WORDS = ['', '', 'Dang!', 'Lovely!', 'Magical!', 'Spellbinding!'];
 let uid = 0;
 
-// Which charged tile a match shape makes. Order matters: the first rule that fits wins.
-export function kindOf(g) {
-  if (Math.max(g.h, g.v) >= 5) return 'pegs';
-  if (g.h >= 3 && g.v >= 3) return 'mew';
-  if (g.sq) return 'cw';
-  if (Math.max(g.h, g.v) === 4) return 'ttt';
-  return null;
+// Which charged tile a match shape makes: the first rule that fits and is unlocked wins,
+// so a big shape made before its tile unlocks still earns the best tile you have.
+export function kindOf(g, allowed = ['pegs', 'mew', 'cw', 'ttt']) {
+  const fits = [];
+  if (Math.max(g.h, g.v) >= 5) fits.push('pegs');
+  if (g.h >= 3 && g.v >= 3) fits.push('mew');
+  if (g.sq) fits.push('cw');
+  if (Math.max(g.h, g.v) >= 4) fits.push('ttt');
+  return fits.find(k => allowed.includes(k)) || null;
 }
 
 export class Board {
@@ -49,6 +51,9 @@ export class Board {
   start(cfg) {
     this.gen = (this.gen || 0) + 1; // invalidates async work from a previous board
     this.cfg = cfg;
+    [COLS, ROWS] = cfg.size || [7, 9];
+    LW = COLS * CELL + PAD * 2;
+    LH = ROWS * CELL + PAD * 2;
     this.moves = cfg.moves;
     this.score = 0;
     this.blasts = 0;
@@ -188,7 +193,7 @@ export class Board {
       for (const [dr, dc] of [[0, 1], [1, 0]]) {
         const r2 = r + dr, c2 = c + dc;
         if (!inBounds(r2, c2) || !g[r][c] || !g[r2][c2]) continue;
-        if (g[r][c].sp && g[r2][c2].sp) { moves.push({ a: { r, c }, b: { r: r2, c: c2 }, size: 9 }); continue; }
+        if (g[r][c].sp && g[r2][c2].sp && this.cfg.mashups !== false) { moves.push({ a: { r, c }, b: { r: r2, c: c2 }, size: 9 }); continue; }
         [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
         const size = Math.max(this.matchAt(r, c), this.matchAt(r2, c2));
         [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
@@ -256,7 +261,7 @@ export class Board {
     this.hint = null;
     const A = this.grid[a.r][a.c], B = this.grid[b.r][b.c];
 
-    if (A.sp && B.sp) {
+    if (A.sp && B.sp && this.cfg.mashups !== false) {
       this.hooks.sfx('swap');
       await tween(160, t => { A.x = a.c + (b.c - a.c) * t * 0.6; A.y = a.r + (b.r - a.r) * t * 0.6; }, ease.inOut);
       this.moves--;
@@ -351,7 +356,7 @@ export class Board {
       let pts = 0;
       for (const g of groups) {
         pts += g.cells.length * 10 * combo + Math.max(0, g.cells.length - 3) * 20;
-        const kind = kindOf(g);
+        const kind = kindOf(g, this.cfg.kinds);
         let keep = null;
         if (kind) {
           keep = (combo === 1 && origins.find(o => g.cells.some(p => key(p) === key(o)))) || g.cells[Math.floor(g.cells.length / 2)];

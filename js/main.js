@@ -1,5 +1,5 @@
 import { S, persist } from './state.js';
-import { DECOR, CROPS, MATERIALS, LEVELS_PER_DAY, DELIVERY_CONTACT, WALLS, SPOTS_PER_WALL, levelConfig } from './data.js';
+import { DECOR, CROPS, MATERIALS, LEVELS_PER_DAY, DELIVERY_CONTACT, WALLS, SPOTS_PER_WALL, UNLOCKS, levelConfig } from './data.js';
 import { Board } from './match3.js';
 import { Cabin } from './cabin.js';
 import { Attic, cropProgress, growOvernight } from './farm.js';
@@ -201,20 +201,51 @@ function startLevel(n) {
   $('#mScoreNum').dataset.v = 0;
   $('#mScoreNum').textContent = '0';
   board.start(cfg);
+  $('#mBlastPill').hidden = cfg.blasts === 0;
+  setTip();
+  introduce(n, cfg);
+}
+
+// First level: the basics. Levels that unlock something open with a "New!" card.
+// Footer hint; the swipe-two part only once mashups are unlocked.
+function setTip() {
+  $('#mTip').replaceChildren(h('b', {}, 'Tap'), board.cfg?.mashups ? ' a charged tile to play it, or swipe two together' : ' a charged tile to play its mini-game');
+}
+
+function introduce(n, cfg) {
   if (!S.seen.tutorial) {
     S.seen.tutorial = true;
     persist();
-    showModal({
+    return showModal({
       title: 'How to match',
       body: h('div', { class: 'howto' },
-        h('p', {}, 'Swap neighbouring tiles to line up 3 or more.'),
-        h('p', {}, 'Bigger shapes leave behind a ', h('b', {}, 'charged tile'), ':'),
-        h('ul', { class: 'shapes' }, Object.entries(GAMES).map(([k, g]) => h('li', {}, icon('sp_' + k), h('span', {}, h('b', {}, g.shape), ` → ${g.name}`)))),
-        h('p', {}, h('b', {}, 'Tap'), ' a charged tile and the board morphs into its game. Win and it ', h('b', {}, 'blasts'), '. ', h('b', {}, 'Swipe two together'), ' for a mashup game.'),
-        h('p', {}, 'Every level needs points ', h('i', {}, 'and'), ' blasts. Lose a level and the day is over.')),
+        h('p', {}, 'Swap neighbouring tiles to line up ', h('b', {}, '3 or more'), '.'),
+        h('p', {}, 'Line up ', h('b', {}, '4 in a row'), ' and one tile stays behind as a ', icon('sp_ttt'), h('b', {}, ' charged tile'), '.'),
+        h('p', {}, h('b', {}, 'Tap'), ' it and the board morphs into a tic-tac-toe game against the storm. Win and it ', h('b', {}, 'blasts'), ' its whole row and column.'),
+        h('p', {}, cfg.blasts ? `This level needs ${cfg.target} points and ${cfg.blasts} blast.` : `This first level just needs ${cfg.target} points. Have fun!`)),
       buttons: [{ label: 'Got it', cls: 'primary' }],
     });
   }
+  const u = UNLOCKS[n];
+  if (!u || S.seen['unlock' + n]) return;
+  S.seen['unlock' + n] = true;
+  persist();
+  const g = u.kind && GAMES[u.kind];
+  showModal({
+    title: 'New!',
+    cls: 'win new-card',
+    body: g
+      ? h('div', { class: 'howto center' },
+        h('p', { class: 'new-icon' }, icon('sp_' + u.kind, 'ico huge')),
+        h('p', {}, h('b', {}, g.shape), ' now makes a ', h('b', {}, `${g.name} tile`), '.'),
+        h('p', {}, `Tap it to play ${g.name}. Win and it ${g.blast}.`))
+      : h('div', { class: 'howto center' },
+        h('p', { class: 'new-icon' }, icon('sp_ttt', 'ico huge'), icon('sp_pegs', 'ico huge')),
+        h('p', {}, h('b', {}, 'Mashups!'), ' Swipe two charged tiles together to play a game that fuses both, like Plinko into a tic-tac-toe board.'),
+        h('p', {}, 'Win and you get both blasts at once. Two of the same make a Supercharged version that clears the board.')),
+    buttons: [{ label: 'Let’s go', cls: 'primary' }],
+  });
+  requestAnimationFrame(() => sparkle(document.querySelector('#modal .new-icon'), { count: 16 }));
 }
 
 // First time each kind of charged tile appears, say what it does.
@@ -266,7 +297,7 @@ async function runSpecial(b, kinds) {
   screens.match.classList.remove('mg-open');
   await b.morph(0);
   quit.disabled = false;
-  $('#mTip').replaceChildren(h('b', {}, 'Tap'), ' a charged tile to play it, or swipe two together');
+  setTip();
   if (res === 'win') {
     S.stats.miniWins++;
     S.stats.blasts += kinds.length;

@@ -25,7 +25,7 @@ Turn between the attic's four walls (◀ ▶ or swipe), each with four planter s
 | 3 | Raised bed | 3 | 4 lumber, 1 fabric, 45 coins |
 | 4 | Greenhouse bed | 4, and crops grow a night faster | 6 lumber, 2 fabric, 90 coins |
 
-The **Pantry** sells crops for coins (wheat 3, cotton 5, flowers 8, pumpkin 14) and crafts them into mini-game boosts: Catnip Tea (+1 heart), Pumpkin Snack (+2 balls), Honey Toast (+30 s, or first letters in Tic-Tac-Clue), Cozy Scarf (the storm plays worse) and Rainbow Jam (a second chance). When a charged tile starts a mini-game you're offered the boosts that fit it. Prices and recipes live in `js/data.js`.
+The **Pantry** sells crops for coins (wheat 3, cotton 5, flowers 8, pumpkin 14) and crafts them into mini-game boosts: Catnip Tea (+1 heart), Pumpkin Snack (+2 balls), Honey Toast (+30 s in Word Square, or a bigger letter tray in Word-Tac-Toe), Cozy Scarf (the storm plays worse) and Rainbow Jam (a second chance). When a charged tile starts a mini-game you're offered the boosts that fit it. Prices and recipes live in `js/data.js`.
 
 ## Charged tiles and mini-games
 
@@ -38,7 +38,31 @@ Bigger match shapes leave a charged tile on the board. Tap it and the board morp
 | L, T or + | Mewdoku (cat region puzzle) | 5×5 area |
 | 2×2 box | Word Square | both diagonals |
 
-Swipe two charged tiles together for a **mashup**: Peg-Tac-Toe, Cat-Tac-Toe, Tic-Tac-Clue, Cat Pegs, Letter Pegs or Wordoku. Two of the same kind give a *Supercharged* version that clears the whole board. Every level needs points **and** blasts, so some days the storm just wins.
+You start small and the game opens up as you go:
+
+| Level | Board | New |
+| --- | --- | --- |
+| 1 | 6×6, 4 colours, no blast needed | 4 in a row → Tic-Tac-Toe |
+| 2 | 6×7 | first blast required |
+| 3 | 7×7, 5 colours | L / T / + → Mewdoku |
+| 4 | 7×8 | 2×2 box → Word Square |
+| 5 | 7×9 | 5 in a row → Star Pegs |
+| 6+ | 7×9, 6 colours from level 8 | mashups; targets, moves and blasts keep climbing |
+
+Shapes you haven't unlocked yet just match normally. Each unlock gets a "New!" card the first time.
+
+Swipe two charged tiles together for a **mashup**. These are fused games, not reskins:
+
+| Mashup | How it plays |
+| --- | --- |
+| Peg-Tac-Toe | Drop balls Plinko-style. The 9 bins at the bottom are the tic-tac-toe squares; where the ball lands is where your ✕ goes. |
+| Cat-Tac-Toe | A duel on a Mewdoku board: you and the storm take turns placing cats, and every cat must obey Mewdoku rules against all of them. Whoever runs out of legal squares loses. |
+| Word-Tac-Toe | Place letters from your tray on the 3×3 grid. The first to make a real 3-letter word along any line wins. |
+| Cat Pegs | A Mewdoku grid sits under the bins. Pick a row, shoot, and the bin the ball lands in picks the column for your cat. |
+| Letter Pegs | Hit the letter pegs in spelling order to answer a clue. Hitting the wrong letters costs a ball. |
+| Word Mewdoku | Each colour has a letter. Read top to bottom, the cats spell the clue's answer, so solving the clue tells you which colour each row's cat is in. |
+
+Two of the same kind give a *Supercharged* version that clears the whole board. Chain reactions call out **Dang!**, then Lovely!, Magical!, Spellbinding!. Every level needs points **and** blasts, so some days the storm just wins.
 
 ## Mewdoku rules (mini-game and arcade)
 
@@ -92,9 +116,8 @@ Open the HTTPS site on a phone: tap **Install** (Android/Chrome) or Share → *A
 | --- | --- |
 | `js/main.js` | Screens and the day/night loop, rewards, decorating, install prompt |
 | `js/match3.js` | Board: matching (lines, L/T, 2×2 boxes), charged tiles, mashups, blasts, cascades |
-| `js/minigames/` | Tic-Tac-Toe, Star Pegs (+ Peg-Tac-Toe, Letter Pegs, Cat Pegs), Mewdoku (+ Wordoku), Word Square, Cat-Tac-Toe, Tic-Tac-Clue; `index.js` maps tiles and pairs to games |
+| `js/minigames/` | Tic-Tac-Toe, Star Pegs (+ Peg-Tac-Toe, Letter Pegs, Cat Pegs), Mewdoku (+ Word Mewdoku), Word Square, Cat-Tac-Toe, Word-Tac-Toe; `index.js` maps tiles and pairs to games |
 | `js/meowdoku-engine.js`, `js/meowdokuboard.js` | Mewdoku generator, uniqueness and logic solvers, and the playable board |
-| `js/sudoku.js`, `js/sudokuboard.js` | Seeded sudoku generator and grid UI (used by Wordoku and Cat-Tac-Toe) |
 | `js/arcade/` | Magical Mewdoku: pre-generated levels and the arcade screen |
 | `tools/` | Icon and Mewdoku level generators |
 | `js/leaderboard.js`, `server/server.js` | Leaderboard client (with offline fallback) and the Node server |

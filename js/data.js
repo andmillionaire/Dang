@@ -35,7 +35,7 @@ export const PLANTERS = [
 export const BOOSTS = {
   tea:     { name: 'Catnip Tea',    need: { flowers: 2, wheat: 1 }, effect: '+1 heart', games: ['mew', 'cw+mew'] },
   snack:   { name: 'Pumpkin Snack', need: { pumpkin: 1 }, effect: '+2 balls', games: ['pegs', 'pegs+ttt', 'mew+pegs', 'cw+pegs'] },
-  toast:   { name: 'Honey Toast',   need: { wheat: 3 }, effect: '+30 seconds, or first letters shown', games: ['cw', 'cw+ttt'] },
+  toast:   { name: 'Honey Toast',   need: { wheat: 3 }, effect: '+30s in Word Square, or a bigger letter tray in Word-Tac-Toe', games: ['cw', 'cw+ttt'] },
   scarf:   { name: 'Cozy Scarf',    need: { cotton: 3 }, effect: 'The storm gets sleepy', games: ['ttt', 'pegs+ttt', 'mew+ttt', 'cw+ttt'] },
   jam:     { name: 'Rainbow Jam',   need: { wheat: 1, cotton: 1, flowers: 1, pumpkin: 1 }, effect: 'A second chance if you lose', games: ['*'] },
 };
@@ -81,13 +81,30 @@ export const WARDROBE = [
 ];
 export const SATURN_SET = ['ringtiara', 'violet', 'crystal', 'glaive'];
 
+// What each level introduces. The game starts small and builds up.
+export const UNLOCKS = {
+  1: { kind: 'ttt' },
+  3: { kind: 'mew' },
+  4: { kind: 'cw' },
+  5: { kind: 'pegs' },
+  6: { mashups: true },
+};
+const BOARD_SIZES = [[6, 6], [6, 7], [7, 7], [7, 8]]; // then 7x9 from level 5
+
 export function levelConfig(n) {
+  const kinds = Object.entries(UNLOCKS).filter(([lv, u]) => +lv <= n && u.kind).map(([, u]) => u.kind);
+  const size = BOARD_SIZES[n - 1] || [7, 9];
   return {
     n,
-    types: n <= 6 ? 5 : 6,
-    moves: Math.min(30, 20 + Math.floor(n / 3)),
-    target: 1000 + (n - 1) * 250,
-    blasts: n <= 3 ? 1 : n <= 8 ? 2 : 3,
+    size,
+    kinds,
+    mashups: n >= 6,
+    types: n <= 2 ? 4 : n <= 7 ? 5 : 6,
+    moves: n <= 2 ? 18 : Math.min(30, 20 + Math.floor(n / 3)),
+    // Tuned with a bot: plain matching gets you about half to three-quarters of the way,
+    // blasts make up the rest.
+    target: [900, 1200, 1000, 1100, 1400][n - 1] || 1400 + (n - 5) * 200,
+    blasts: n === 1 ? 0 : n <= 4 ? 1 : n <= 9 ? 2 : 3,
     // 0..1, how hard the big-match mini-games are.
     difficulty: Math.min(1, (n - 1) / 12),
   };
