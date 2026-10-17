@@ -14,7 +14,7 @@ export const decode = ([regions, solution, locked]) => ({
 // Playable Mewdoku board, following Meowdoku's rules:
 // - one piece per row, column and colour region; pieces may not touch, even diagonally
 // - the puzzle starts with one locked piece
-// - tap marks ✕, double-tap places, tap a placed piece to pick it back up
+// - tap once for ✕, tap the ✕ again to place a piece, tap a placed piece to pick it back up
 // - placing a piece that breaks a rule costs a heart (and isn't placed)
 // - Undo, Restart, and a hint that points at a square worth checking
 // piece(region) -> Node for a placed piece. onDone('win' | 'lose').
@@ -27,7 +27,7 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
   if (lockedCell >= 0) cat[lockedCell] = true;
   const state = { mistakes: 0, hints: 0, done: false };
   const history = [];
-  let mode = 'mark', autoX = false, last = { i: -1, t: 0 }, hintCell = -1, hintTimer = 0;
+  let mode = 'mark', autoX = false, hintCell = -1, hintTimer = 0, msgTimer = 0;
 
   const R = i => (i / N) | 0, C = i => i % N;
   const sees = (i, j) => i !== j && (R(i) === R(j) || C(i) === C(j) || regions[i] === regions[j] || (Math.abs(R(i) - R(j)) <= 1 && Math.abs(C(i) - C(j)) <= 1));
@@ -44,7 +44,16 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
       style: `background:${REGION_COLORS[regions[i]]}`,
       'aria-label': `Row ${R(i) + 1}, column ${C(i) + 1}`,
     });
-    b.addEventListener('click', () => tap(i));
+    // Taps are read from pointer events, not click: iOS can delay, drop or double up clicks.
+    // A touch counts as a tap if the finger didn't slide off; a guard swallows doubled events.
+    let down = null;
+    b.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
+    b.addEventListener('pointerup', e => {
+      if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 16) tapOnce(i);
+      down = null;
+    });
+    b.addEventListener('pointercancel', () => (down = null));
+    b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapOnce(i); } });
     return b;
   });
 
@@ -63,6 +72,28 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
       h('button', { type: 'button', class: 'btn small', onclick: () => restart() }, 'Restart')),
     help);
 
+  let lastTap = { i: -1, t: 0 };
+  function tapOnce(i) {
+    const now = performance.now();
+    if (lastTap.i === i && now - lastTap.t < 150) return;
+    lastTap = { i, t: now };
+    tap(i);
+  }
+
+  // Say which rule a placement broke, so a lost heart is never a mystery.
+  function why(i, j) {
+    if (R(i) === R(j)) return `That ${pieceName} would share a row.`;
+    if (C(i) === C(j)) return `That ${pieceName} would share a column.`;
+    if (regions[i] === regions[j]) return `That colour already has a ${pieceName}.`;
+    return `${pieceName[0].toUpperCase() + pieceName.slice(1)}s can't touch, not even corner to corner.`;
+  }
+  function say(text) {
+    clearTimeout(msgTimer);
+    help.textContent = text;
+    help.classList.add('warn');
+    msgTimer = setTimeout(() => { help.classList.remove('warn'); render(); }, 2600);
+  }
+
   function setMode(m) {
     mode = m;
     modeBtns[0].classList.toggle('on', m === 'mark');
@@ -80,8 +111,8 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
       b.replaceChildren(cat[i] ? piece(regions[i]) : mark[i] ? h('span', { class: 'md-x' }, '✕') : ruledOut ? h('span', { class: 'md-dot' }) : '');
       if (regionLabel && !cat[i]) b.append(h('span', { class: 'md-lab' }, regionLabel(regions[i])));
     });
-    help.textContent = mode === 'mark'
-      ? `Tap to mark ✕ · double-tap to place a ${pieceName} · tap a ${pieceName} to pick it up`
+    if (!help.classList.contains('warn')) help.textContent = mode === 'mark'
+      ? `Tap once for ✕, tap again for a ${pieceName} · tap a ${pieceName} to pick it up`
       : `Tap to place a ${pieceName} · tap a ${pieceName} to pick it up`;
     onChange && onChange({ ...state, lives: lives - state.mistakes, left: N - placed.length, placed });
   }
@@ -104,6 +135,7 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
       state.mistakes++;
       sfx('nope');
       flash([i, ...clash]);
+      say(why(i, clash[0]) + ' −1 heart');
       render();
       if (state.mistakes >= lives) { state.done = true; onDone('lose'); }
       return;
@@ -130,19 +162,10 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
       render();
       return;
     }
-    if (mode === 'place') { place(i); return; }
-    const now = performance.now();
-    if (last.i === i && now - last.t < 350) {
-      // double tap: undo the ✕ the first tap toggled, then place
-      history.pop();
-      mark[i] = last.markedBefore;
-      last = { i: -1, t: 0 };
-      place(i);
-      return;
-    }
-    last = { i, t: now, markedBefore: mark[i] };
-    history.push({ type: 'mark', i, was: mark[i] });
-    mark[i] = !mark[i];
+    // place mode, or a second tap on a ✕: put a piece down
+    if (mode === 'place' || mark[i]) { place(i); return; }
+    history.push({ type: 'mark', i, was: false });
+    mark[i] = true;
     sfx('select');
     render();
   }

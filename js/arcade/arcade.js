@@ -50,7 +50,7 @@ export function mountArcade({ sfx, changed, onExit }) {
         h('button', { class: 'seg-btn on' }, 'Levels'),
         h('button', { class: 'seg-btn', onclick: () => board(0) }, 'Leaderboard')),
       h('div', { class: 'arc-scroll' },
-        h('p', { class: 'muted small arc-blurb' }, 'Place one magical girl in every row, every column and every colour. Girls can’t touch, not even diagonally. Start from the locked girl. Tap to mark ✕, double-tap to place, tap a girl to pick her up. Breaking a rule costs a heart. Hints point you at the next step and cost coins.'),
+        h('p', { class: 'muted small arc-blurb' }, 'Place one magical girl in every row, every column and every colour. Girls can’t touch, not even diagonally. Start from the locked girl. Tap once for ✕, tap again to place a girl, tap a girl to pick her up. Breaking a rule costs a heart. Hints point you at the next step and cost coins.'),
         tiers.map(([a, b]) => h('div', { class: 'tier' },
           h('p', { class: 'slot-label' }, `${tierName(a)} · ${sizeOf(a)}×${sizeOf(a)} · levels ${a}–${b}`),
           h('div', { class: 'arc-grid' }, Array.from({ length: b - a + 1 }, (_, i) => {

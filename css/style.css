@@ -740,3 +740,4 @@ div.word-slots b.on { background: var(--gold); animation: placeIn .3s cubic-bezi
   .mc-cmd { animation-duration: .01s; animation-delay: .8s; }
   .mc-fuse.low i, .md-cell.lit, .mc-tempt, .mc-flame { animation: none; }
 }
+.md-help.warn { color: #ff9a8a; }
