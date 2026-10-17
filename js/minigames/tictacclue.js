@@ -2,7 +2,8 @@ import { h } from '../ui.js';
 import { sleep } from '../pixel.js';
 import { mount, banner } from './common.js';
 import { outcome, aiMove } from './tictactoe.js';
-import { WORDS, KEYS } from './crossword.js';
+import { WORDS } from './crossword.js';
+import { keyboard } from './keyboard.js';
 
 // Tic-tac-toe where each square hides a clue. Answer it to claim the square.
 export function play(root, { difficulty: d, sfx }) {
@@ -12,12 +13,14 @@ export function play(root, { difficulty: d, sfx }) {
   const skill = 0.35 + 0.5 * d;
   let sel = -1, typed = '', locked = false, done = false;
 
-  const cells = words.map((w, i) => h('button', { class: 'ttt-cell clue-cell', onclick: () => pick(i) }));
+  // Buttons are built before the game's handlers exist; they forward through `act`.
+  const act = {};
+  const cells = words.map((w, i) => h('button', { class: 'ttt-cell clue-cell', onclick: () => act.pick(i) }));
   const clue = h('p', { class: 'cw-clue' }, 'Tap a square to see its clue.');
   const slots = h('div', { class: 'slots' });
-  const kb = h('div', { class: 'kb' }, KEYS.map(row => h('div', { class: 'kb-row' },
-    [...row].map(k => h('button', { class: 'kb-key' + (k === '⌫' ? ' wide' : ''), onclick: () => key(k) }, k)))));
-  ui.body.append(h('div', { class: 'ttt-grid small' }, cells), clue, slots, kb);
+  const kb = keyboard(k => act.key(k));
+  ui.wrap.classList.add('typing');
+  ui.body.append(h('div', { class: 'grid-fit' }, h('div', { class: 'ttt-grid small' }, cells)), clue, slots, kb);
 
   function render(line) {
     cells.forEach((c, i) => {
@@ -66,6 +69,7 @@ export function play(root, { difficulty: d, sfx }) {
       render();
     }
 
+    Object.assign(act, { pick, key });
     async function key(k) {
       if (locked || done || sel < 0) return;
       if (k === '⌫') typed = typed.slice(0, -1);

@@ -462,3 +462,29 @@ main { flex: 1; min-height: 0; position: relative; }
   position: fixed; left: calc(env(safe-area-inset-left, 0px) + 6px); bottom: calc(var(--safe-b) + 1px); z-index: 40;
   font-size: 13px; line-height: 1; color: var(--muted); opacity: .55; pointer-events: none;
 }
+
+/* ---------- touch + small-screen fixes ---------- */
+/* No double-tap-to-zoom anywhere (iOS ignores user-scalable=no). */
+html, button, input, .sd-cell, .cw-cell, .ttt-cell { touch-action: manipulation; }
+
+/* While a mini-game is open it gets the whole screen. */
+#scr-match.mg-open .match-hud, #scr-match.mg-open .match-foot { display: none; }
+
+/* Typing games: keyboard always on screen, grid shrinks to what's left. */
+.mg.typing { height: 100%; min-height: 0; }
+.mg.typing .mg-tip { font-size: 15px; }
+.mg.typing .mg-info { flex-wrap: nowrap; }
+.mg.typing .timebar { flex: 1; }
+.mg.typing .mg-info .btn { flex-shrink: 0; }
+.mg.typing .mg-body { min-height: 0; gap: 6px; }
+.grid-fit { flex: 1; min-height: 72px; width: 100%; display: flex; align-items: center; justify-content: center; }
+.grid-fit .cw-grid, .grid-fit .ttt-grid.small { height: 100%; max-height: 230px; width: auto; max-width: 100%; aspect-ratio: 1; }
+.grid-fit .cw-grid { grid-auto-rows: 1fr; }
+.grid-fit .ttt-grid.small { grid-auto-rows: 1fr; max-height: 200px; }
+.grid-fit .cw-cell { font-size: clamp(16px, 5vh, 30px); aspect-ratio: auto; }
+.grid-fit .ttt-cell { aspect-ratio: auto; }
+.kb { flex-shrink: 0; }
+.kb-key { height: 42px; max-width: 40px; -webkit-user-select: none; user-select: none; }
+.kb-key.wide { max-width: 60px; font-size: 16px; }
+.kb-key.down { background: #c8792e; color: var(--ink); }
+.mg.typing .mg-status { font-size: 16px; min-height: 1.2em; }

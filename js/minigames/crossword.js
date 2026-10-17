@@ -1,6 +1,7 @@
 import { h } from '../ui.js';
 import { sleep } from '../pixel.js';
 import { mount, banner } from './common.js';
+import { keyboard } from './keyboard.js';
 
 // Word squares: row n reads the same as column n, so each clue answers both.
 export const PUZZLES = [
@@ -11,8 +12,6 @@ export const PUZZLES = [
   { rows: ['LAMP', 'AREA', 'MEAL', 'PALE'], clues: ['Light beside the armchair', 'Square footage', 'Breakfast or supper', 'Wan, like a rainy sky'] },
   { rows: ['HEART', 'EMBER', 'ABUSE', 'RESIN', 'TREND'], clues: ['Shape of a magical brooch', 'Glowing bit in the fireplace', 'Misuse', 'Sticky pine sap', 'Passing fad'] },
 ];
-
-export const KEYS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM⌫'];
 
 // Every answer/clue pair, de-duplicated, for the word mashups.
 export const WORDS = [...new Map(PUZZLES.flatMap(p => p.rows.map((w, i) => [w, { word: w, clue: p.clues[i] }]))).values()];
@@ -34,13 +33,15 @@ export function play(root, { difficulty: d, sfx }) {
   const ui = mount(root, { title: 'Word Square', tip: 'Every row matches its column. Fill the square before time runs out.' });
   const bar = h('div', { class: 'timebar' }, h('i'));
   const clue = h('p', { class: 'cw-clue' });
-  const cells = grid.map((_, i) => h('button', { class: 'cw-cell' + (given.has(i) ? ' given' : ''), onclick: () => tap(i) }));
+  // Buttons are built before the game's handlers exist; they forward through `act`.
+  const act = {};
+  const cells = grid.map((_, i) => h('button', { class: 'cw-cell' + (given.has(i) ? ' given' : ''), onclick: () => act.tap(i) }));
   const board = h('div', { class: 'cw-grid', style: `grid-template-columns: repeat(${n}, 1fr)` }, cells);
-  const hint = h('button', { class: 'btn small', onclick: () => useHint() }, 'Hint (−10s)');
-  const kb = h('div', { class: 'kb' }, KEYS.map(row => h('div', { class: 'kb-row' },
-    [...row].map(k => h('button', { class: 'kb-key' + (k === '⌫' ? ' wide' : ''), onclick: () => key(k) }, k)))));
-  ui.info.append(bar);
-  ui.body.append(board, clue, kb, h('div', { class: 'cw-tools' }, hint));
+  const hint = h('button', { class: 'btn small', onclick: () => act.useHint() }, 'Hint (−10s)');
+  const kb = keyboard(k => act.key(k));
+  ui.wrap.classList.add('typing');
+  ui.info.append(bar, hint);
+  ui.body.append(h('div', { class: 'grid-fit' }, board), clue, kb);
 
   const word = i => {
     const r = (i / n) | 0, c = i % n;
@@ -100,6 +101,7 @@ export function play(root, { difficulty: d, sfx }) {
       for (let j = k + step; j >= 0 && j < n; j += step) if (!given.has(w[j])) { sel = w[j]; return; }
     }
 
+    Object.assign(act, { tap, key, useHint });
     function key(k) {
       if (done) return;
       if (k === '⌫') {

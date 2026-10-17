@@ -224,6 +224,7 @@ async function runSpecial(b, kinds) {
   quit.disabled = true;
   $('#mTip').textContent = kinds.length > 1 ? `Mashup! The board is turning into ${game.name}!` : `The board is turning into ${game.name}!`;
   await b.morph(1);
+  screens.match.classList.add('mg-open');
   const box = $('#morph');
   box.hidden = false;
   const playOnce = async () => {
@@ -239,6 +240,7 @@ async function runSpecial(b, kinds) {
   }
   box.hidden = true;
   box.replaceChildren();
+  screens.match.classList.remove('mg-open');
   await b.morph(0);
   quit.disabled = false;
   $('#mTip').replaceChildren(h('b', {}, 'Tap'), ' a charged tile to play it, or swipe two together');

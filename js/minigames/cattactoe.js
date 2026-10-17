@@ -27,7 +27,9 @@ export function play(root, { difficulty: d, sfx }) {
     class: 'sd-cell ctt' + (i % N === 1 ? ' bx' : '') + (((i / N) | 0) === 1 ? ' by' : ''),
     onclick: () => { if (!locked && !done && !grid[i]) { sel = i; sfx('select'); render(); } },
   }));
-  const palette = [1, 2, 3, 4].map(v => h('button', { class: 'sd-sym', 'aria-label': CAT_BREEDS[v - 1].name, onclick: () => choose(v) }, icon('cat' + (v - 1), 'ico cat')));
+  // The palette is built before the game's handlers exist; it forwards through `act`.
+  const act = {};
+  const palette = [1, 2, 3, 4].map(v => h('button', { class: 'sd-sym', 'aria-label': CAT_BREEDS[v - 1].name, onclick: () => act.choose(v) }, icon('cat' + (v - 1), 'ico cat')));
   ui.body.append(h('div', { class: 'sd-grid n4', style: 'grid-template-columns: repeat(4, 1fr)' }, cells), h('div', { class: 'sd-palette n4' }, palette));
 
   function render(line) {
@@ -76,6 +78,7 @@ export function play(root, { difficulty: d, sfx }) {
       return empty[(Math.random() * empty.length) | 0];
     }
 
+    act.choose = choose;
     async function choose(v) {
       if (locked || done || sel < 0) return;
       const i = sel;
