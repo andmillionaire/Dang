@@ -19,7 +19,7 @@ Add `?debug` to the URL to expose `window.dang` (state + board) in the console.
 
 ## Install as an app
 
-Installing needs HTTPS (localhost works too). Push to `main` and the included workflow deploys to GitHub Pages. In the repo, set **Settings → Pages → Source** to **GitHub Actions** once. Then open the site on a phone and either:
+Installing needs HTTPS (localhost works too). Host it anywhere static over HTTPS (see self-hosting below), then open the site on a phone and either:
 
 - **Android / Chrome:** tap the in-game **Install** button, or use *Add to Home screen*.
 - **iOS / Safari:** Share → *Add to Home Screen*.
