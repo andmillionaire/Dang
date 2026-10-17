@@ -1,22 +1,25 @@
 import { S, persist } from '../state.js';
 import { $, h, icon, showModal, toast } from '../ui.js';
-import { GIRLS as GIRL_DEFS } from '../spritedata.js';
-import { sudokuBoard } from '../sudokuboard.js';
-import { LEVEL_COUNT, buildLevel, levelSpec, tierName } from './levels.js';
+import { meowdokuBoard, decode } from '../meowdokuboard.js';
+import { LEVELS } from './meowdoku-levels.js';
 import { fetchBoard, submitScore, fmtSecs } from '../leaderboard.js';
 
-const GAME = 'sudoku';
+const GAME = 'meowdoku';
 const LIVES = 3;
 const HINT_PENALTY = 15; // seconds added per hint
-export const hintCost = n => (levelSpec(n).N === 9 ? 10 : 5);
+const LEVEL_COUNT = LEVELS.length;
+const sizeOf = n => LEVELS[n - 1][1].length;
+const TIERS = { 5: 'Twinkle', 6: 'Moonbeam', 7: 'Stardust', 8: 'Starlight', 9: 'Nebula', 10: 'Supernova' };
+const tierName = n => TIERS[sizeOf(n)];
+export const hintCost = n => (sizeOf(n) >= 8 ? 10 : 5);
 const reward = n => 2 + Math.floor(n / 10);
 
 const SOON = [['Star Pegs', 'sp_pegs'], ['Word Square', 'sp_cw'], ['Tic-Tac-Toe', 'sp_ttt']];
 
-// The arcade cabinet: Starlight Sudoku with 100 levels and a leaderboard.
+// The arcade cabinet: Magical Mewdoku with 100 levels and a leaderboard.
 export function mountArcade({ sfx, changed, onExit }) {
   const root = $('#scr-arcade');
-  const A = S.arcade.sudoku;
+  const A = S.arcade.meowdoku;
   let timer = 0;
 
   const stopTimer = () => { clearInterval(timer); timer = 0; };
@@ -29,12 +32,17 @@ export function mountArcade({ sfx, changed, onExit }) {
   function header(sub, back) {
     return h('div', { class: 'arc-head' },
       h('button', { class: 'btn small', onclick: back }, '◀ Back'),
-      h('div', { class: 'arc-title' }, h('b', {}, 'Starlight Sudoku'), h('small', {}, sub)));
+      h('div', { class: 'arc-title' }, h('b', {}, 'Magical Mewdoku'), h('small', {}, sub)));
   }
 
   // ---------- level map ----------
   function levels() {
-    const tiers = [[1, 10], [11, 40], [41, 70], [71, 100]];
+    // consecutive runs of the same board size
+    const tiers = [];
+    for (let n = 1; n <= LEVEL_COUNT; n++) {
+      if (!tiers.length || sizeOf(tiers[tiers.length - 1][0]) !== sizeOf(n)) tiers.push([n, n]);
+      else tiers[tiers.length - 1][1] = n;
+    }
     const cleared = Object.keys(A.best).length;
     frame(
       header(`${cleared}/${LEVEL_COUNT} cleared`, () => { stopTimer(); onExit(); }),
@@ -42,9 +50,9 @@ export function mountArcade({ sfx, changed, onExit }) {
         h('button', { class: 'seg-btn on' }, 'Levels'),
         h('button', { class: 'seg-btn', onclick: () => board(0) }, 'Leaderboard')),
       h('div', { class: 'arc-scroll' },
-        h('p', { class: 'muted small arc-blurb' }, 'Every row, column and box needs one of each magical girl. Hints cost coins.'),
+        h('p', { class: 'muted small arc-blurb' }, 'Place one magical girl in every row, every column and every colour. Girls can’t touch, not even diagonally. Tap to mark ✕, double-tap to place. Hints cost coins.'),
         tiers.map(([a, b]) => h('div', { class: 'tier' },
-          h('p', { class: 'slot-label' }, `${tierName(a)} · ${levelSpec(a).N}×${levelSpec(a).N} · levels ${a}–${b}`),
+          h('p', { class: 'slot-label' }, `${tierName(a)} · ${sizeOf(a)}×${sizeOf(a)} · levels ${a}–${b}`),
           h('div', { class: 'arc-grid' }, Array.from({ length: b - a + 1 }, (_, i) => {
             const n = a + i, best = A.best[n], locked = n > A.unlocked;
             return h('button', {
@@ -59,23 +67,22 @@ export function mountArcade({ sfx, changed, onExit }) {
 
   // ---------- play ----------
   function play(n) {
-    const L = buildLevel(n);
+    const L = decode(LEVELS[n - 1]);
     let elapsed = 0, last = performance.now(), hints = 0, finished = false;
     const clock = h('b', { class: 'clock' }, '0:00.0');
     const hearts = h('span', { class: 'mg-stat' });
     const hintBtn = h('button', { class: 'btn small primary', onclick: () => useHint() });
     const host = h('div', { class: 'arc-board' });
-    const names = GIRL_DEFS.map(g => g.name);
 
     frame(
       header(`Level ${n} · ${tierName(n)}`, () => { if (!finished) quit(); else levels(); }),
       h('div', { class: 'arc-bar' }, clock, hearts, hintBtn),
       host,
-      h('p', { class: 'muted small center' }, 'Tap a square, then a girl. Or pick a girl first and tap squares.'));
+    );
 
-    const ctl = sudokuBoard(host, {
-      N: L.N, puzzle: L.puzzle, solution: L.solution, names, lives: LIVES, sfx, placeSfx: 'type',
-      symbol: v => icon('girl' + (v - 1), 'ico girl'),
+    const ctl = meowdokuBoard(host, {
+      puzzle: L, lives: LIVES, sfx, pieceName: 'girl',
+      piece: g => icon('girl' + g, 'ico girl'),
       onChange: s => { hearts.replaceChildren(...Array.from({ length: LIVES }, (_, i) => icon(i < s.lives ? 'heart' : 'heartOff'))); },
       onDone: res => done(res),
     });
@@ -121,7 +128,7 @@ export function mountArcade({ sfx, changed, onExit }) {
         sfx('tttlose');
         showModal({
           title: 'Out of hearts',
-          body: h('p', {}, 'Three wrong guesses. The girls shuffle back into place.'),
+          body: h('p', {}, 'Three wrong guesses. The girls scatter back into the rain.'),
           buttons: [{ label: 'Levels', onClick: levels }, { label: 'Try again', cls: 'primary', onClick: () => play(n) }],
         });
         return;

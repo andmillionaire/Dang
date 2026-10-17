@@ -23,7 +23,7 @@ async function api(path, opts = {}) {
 }
 
 function localBoard(game, level) {
-  const best = S.arcade[game].best;
+  const best = (S.arcade[game] || { best: {} }).best;
   const me = S.hero ? S.hero.name : 'You';
   if (level) {
     const b = best[level];

@@ -11,7 +11,7 @@ const PORT = Number(process.env.PORT || 8080);
 const DB_FILE = path.join(DATA_DIR, 'leaderboard.json');
 
 // Games with leaderboards and how many levels each has.
-const GAMES = { sudoku: { levels: 100 } };
+const GAMES = { meowdoku: { levels: 100 } };
 
 // ---------- storage ----------
 let db = {};

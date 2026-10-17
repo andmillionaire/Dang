@@ -25,7 +25,7 @@ export const CATALOG = [
   { id: 'lumber',       name: 'Lumber',        icon: 'lumber',  price: 10, note: 'For furniture and frames' },
   { id: 'fabric',       name: 'Fabric',        icon: 'fabric',  price: 12, note: 'For anything soft' },
   { id: 'kit',          name: 'Planter kit',   icon: 'kit',     price: null, note: 'Build another attic planter' },
-  { id: 'arcade',       name: 'Arcade cabinet', icon: 'arcade', price: 120,  note: 'Starlight Sudoku, 100 levels, right in the cabin' },
+  { id: 'arcade',       name: 'Arcade cabinet', icon: 'arcade', price: 120,  note: 'Magical Mewdoku, 100 levels, right in the cabin' },
 ];
 
 export const DECOR = [

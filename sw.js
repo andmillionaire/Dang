@@ -1,9 +1,9 @@
 // Offline-first service worker. Bump VERSION whenever app files change.
-const VERSION = 'dang-0.6.1'; // keep in step with js/version.js
+const VERSION = 'dang-0.7.0'; // keep in step with js/version.js
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/arcade/arcade.js',
-  'js/arcade/levels.js',
+  'js/arcade/meowdoku-levels.js',
   'js/audio.js',
   'js/bedroom.js',
   'js/bgrain.js',
@@ -16,6 +16,8 @@ const SHELL = [
   'js/leaderboard.js',
   'js/main.js',
   'js/match3.js',
+  'js/meowdoku-engine.js',
+  'js/meowdokuboard.js',
   'js/minigames/cattactoe.js',
   'js/minigames/common.js',
   'js/minigames/crossword.js',

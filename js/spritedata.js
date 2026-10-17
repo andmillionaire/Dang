@@ -494,7 +494,7 @@ export const SPECIAL_ROWS = {
   ],
 };
 
-// ---------- arcade sudoku: magical-girl portraits (12x12) ----------
+// ---------- arcade Mewdoku: magical-girl portraits (12x12) ----------
 // H hair, G hair shine, X tiara gem, E eyes, s skin, m mouth.
 export const GIRL_ROWS = {
   long: [
@@ -536,6 +536,7 @@ export const GIRLS = [
   { name: 'Snow',   style: 'long', H: '#c8c8d8', G: '#f4f4fc', X: '#4f8fd0', E: '#5a6070' },
   { name: 'Ink',    style: 'long', H: '#2a2438', G: '#4a4060', X: '#d0463c', E: '#c04a8a' },
   { name: 'Saturn', style: 'bob',  H: '#4a2468', G: '#7a4aa0', X: '#a46ad0', E: '#6a3aa0' },
+  { name: 'Berry',  style: 'long', H: '#9a2a5a', G: '#d05a8a', X: '#4f8fd0', E: '#3a8a4a' },
 ];
 
 // ---------- pets ----------

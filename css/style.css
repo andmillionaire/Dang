@@ -488,3 +488,23 @@ html, button, input, .sd-cell, .cw-cell, .ttt-cell { touch-action: manipulation;
 .kb-key.wide { max-width: 60px; font-size: 16px; }
 .kb-key.down { background: #c8792e; color: var(--ink); }
 .mg.typing .mg-status { font-size: 16px; min-height: 1.2em; }
+
+/* ---------- Mewdoku board ---------- */
+.md-wrap { display: flex; justify-content: center; width: 100%; }
+.md-grid { display: grid; width: min(86vw, 340px); background: var(--ink); padding: 3px; }
+.arc-board .md-grid { width: min(92vw, 420px, 56dvh); }
+.md-cell {
+  aspect-ratio: 1; padding: 0; cursor: pointer; display: grid; place-items: center; position: relative;
+  border: 1px solid rgba(26, 18, 32, .22); font: inherit;
+}
+.md-cell.bt { border-top: 3px solid var(--ink); } .md-cell.bb { border-bottom: 3px solid var(--ink); }
+.md-cell.bl { border-left: 3px solid var(--ink); } .md-cell.br { border-right: 3px solid var(--ink); }
+.md-cell .ico { width: 82%; height: 82%; }
+.md-cell.pop .ico { animation: pop .2s; }
+.md-cell.wrong { animation: shake .3s; box-shadow: inset 0 0 0 40px rgba(255, 90, 80, .55); }
+.md-cell.hinted .ico { filter: drop-shadow(0 0 3px #fff); }
+.md-x { color: rgba(26, 18, 32, .7); font-size: clamp(12px, 4vw, 22px); line-height: 1; }
+.md-dot { width: 4px; height: 4px; background: rgba(26, 18, 32, .35); }
+.md-mode { justify-content: center; }
+.md-mode .seg-btn { font-size: 17px; padding: 6px 10px; }
+.md-help { margin: 0 !important; }
