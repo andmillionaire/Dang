@@ -1,5 +1,5 @@
 import { S, persist } from './state.js';
-import { CATALOG, KIT_COSTS, DELIVERY_CONTACT } from './data.js';
+import { CATALOG, kitPrice as kitPriceFor, DELIVERY_CONTACT } from './data.js';
 import { $, h, icon, showModal, toast } from './ui.js';
 import { sleep } from './pixel.js';
 
@@ -23,7 +23,7 @@ const MOM = [
   'It’s Mom. Your aunt says rain is good for the skin. Stay cozy!',
 ];
 
-const kitPrice = () => KIT_COSTS[S.plotsOwned + S.mats.kit] ?? null;
+const kitPrice = () => kitPriceFor(S.planters.filter(p => p.level).length + S.mats.kit);
 const priceOf = item => (item.id === 'kit' ? kitPrice() : item.id === 'arcade' && S.arcade.owned ? null : item.price);
 
 export function openPhone({ sfx, changed }) {
@@ -78,7 +78,7 @@ export function openPhone({ sfx, changed }) {
         icon(it.icon, 'ico big'),
         h('div', { class: 'shop-info' },
           h('b', {}, it.name),
-          h('small', {}, price === null ? (it.id === 'arcade' ? 'Already in your cabin' : 'Sold out: the attic is full') : it.note)),
+          h('small', {}, price === null ? (it.id === 'arcade' ? 'Already in your cabin' : 'Sold out: every attic spot has a planter') : it.note)),
         h('span', { class: 'cost' }, icon('coin'), price === null ? '–' : price),
         h('div', { class: 'stepper small' },
           h('button', { class: 'arrow', 'aria-label': `Fewer ${it.name}`, onclick: () => step(-1) }, '−'),

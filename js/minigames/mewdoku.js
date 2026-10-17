@@ -12,6 +12,7 @@ import { mount, banner, hearts } from './common.js';
 export function play(root, opts) {
   if (opts.wordoku) return playWordoku(root, opts);
   const { difficulty: d, sfx } = opts;
+  const lives = 3 + (opts.boost === 'tea' ? 1 : 0);
   const ui = mount(root, { title: 'Mewdoku', tip: 'One cat in every row, column and colour. Cats can’t touch, not even diagonally. Start from the locked cat.' });
   const size = d < 0.5 ? 5 : 6;
   const pool = POOL.filter(e => e[1].length === size);
@@ -20,9 +21,9 @@ export function play(root, opts) {
   const puzzle = { ...shuffled, locked: (Math.random() * size) | 0 };
   return new Promise(resolve => {
     meowdokuBoard(ui.body, {
-      puzzle, lives: 3, sfx, pieceName: 'cat',
+      puzzle, lives, sfx, pieceName: 'cat',
       piece: g => icon('cat' + (g % CAT_BREEDS.length), 'ico cat'),
-      onChange: s => ui.info.replaceChildren(h('span', { class: 'mg-stat' }, hearts(s.lives, 3)), h('span', { class: 'mg-stat' }, `${s.left} cat${s.left === 1 ? '' : 's'} to place`)),
+      onChange: s => ui.info.replaceChildren(h('span', { class: 'mg-stat' }, hearts(s.lives, lives)), h('span', { class: 'mg-stat' }, `${s.left} cat${s.left === 1 ? '' : 's'} to place`)),
       onDone: async res => {
         sfx(res === 'win' ? 'tttwin' : 'tttlose');
         await sleep(500);
@@ -34,8 +35,9 @@ export function play(root, opts) {
 }
 
 // Wordoku: a 4x4 letter sudoku whose top row spells a clue's answer.
-function playWordoku(root, { difficulty: d, sfx, wordoku }) {
+function playWordoku(root, { difficulty: d, sfx, wordoku, boost }) {
   const N = 4;
+  const lives = 3 + (boost === 'tea' ? 1 : 0);
   const ui = mount(root, { title: 'Wordoku', tip: 'A sudoku made of letters. The top row spells the answer to the clue.' });
   const { puzzle, solution } = generate(N, 7 - Math.round(d * 2));
   const letter = {};
@@ -45,8 +47,8 @@ function playWordoku(root, { difficulty: d, sfx, wordoku }) {
   ui.body.append(h('p', { class: 'cw-clue' }, h('b', {}, 'Clue: '), wordoku.clue));
   return new Promise(resolve => {
     sudokuBoard(ui.body, {
-      N, puzzle, solution, symbol, names, lives: 3, sfx, placeSfx: 'type',
-      onChange: s => ui.info.replaceChildren(h('span', { class: 'mg-stat' }, hearts(s.lives, 3)), h('span', { class: 'mg-stat' }, `${s.empty} empty`)),
+      N, puzzle, solution, symbol, names, lives, sfx, placeSfx: 'type',
+      onChange: s => ui.info.replaceChildren(h('span', { class: 'mg-stat' }, hearts(s.lives, lives)), h('span', { class: 'mg-stat' }, `${s.empty} empty`)),
       onDone: async res => {
         sfx(res === 'win' ? 'tttwin' : 'tttlose');
         await sleep(500);

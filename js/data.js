@@ -4,17 +4,41 @@ export const DELIVERY_CONTACT = 'Jeff Bezos';
 export const LEVELS_PER_DAY = 3;
 
 // Crops grow one step per night you sleep.
+// yield is per plant; a planter holds one plant per level. sell = coins each in the Pantry.
 export const CROPS = {
-  wheat:   { name: 'Wheat',   nights: 1, yield: 3 },
-  cotton:  { name: 'Cotton',  nights: 1, yield: 3 },
-  flowers: { name: 'Flowers', nights: 2, yield: 3 },
-  pumpkin: { name: 'Pumpkin', nights: 3, yield: 2 },
+  wheat:   { name: 'Wheat',   nights: 1, yield: 3, sell: 3 },
+  cotton:  { name: 'Cotton',  nights: 1, yield: 3, sell: 5 },
+  flowers: { name: 'Flowers', nights: 2, yield: 3, sell: 8 },
+  pumpkin: { name: 'Pumpkin', nights: 3, yield: 2, sell: 14 },
 };
 
 export const MATERIALS = { lumber: 'Lumber', fabric: 'Fabric' };
 
-// Planter kit price by how many planters you'll have once it's built (first planter is free).
-export const KIT_COSTS = [0, 30, 60, 90, 130, 180];
+// The attic has four walls with four planter spots each.
+export const WALLS = ['North', 'East', 'South', 'West'];
+export const SPOTS_PER_WALL = 4;
+export const SPOT_COUNT = WALLS.length * SPOTS_PER_WALL;
+
+// Planter kit price, by how many planters you already have (kits waiting to be built count too).
+export const kitPrice = owned => (owned >= SPOT_COUNT ? null : 20 + owned * 15);
+
+// Planter levels: plants = plants per seed packet; upgrade = cost to reach this level.
+export const PLANTERS = [
+  null,
+  { name: 'Clay pot',       plants: 1 },
+  { name: 'Wooden box',     plants: 2, upgrade: { coins: 20, lumber: 2 } },
+  { name: 'Raised bed',     plants: 3, upgrade: { coins: 45, lumber: 4, fabric: 1 } },
+  { name: 'Greenhouse bed', plants: 4, upgrade: { coins: 90, lumber: 6, fabric: 2 }, faster: true },
+];
+
+// Crafted in the Pantry, used before a mini-game. `games` lists the mini-games (or mashups) it helps.
+export const BOOSTS = {
+  tea:     { name: 'Catnip Tea',    need: { flowers: 2, wheat: 1 }, effect: '+1 heart', games: ['mew', 'cw+mew'] },
+  snack:   { name: 'Pumpkin Snack', need: { pumpkin: 1 }, effect: '+2 balls', games: ['pegs', 'pegs+ttt', 'mew+pegs', 'cw+pegs'] },
+  toast:   { name: 'Honey Toast',   need: { wheat: 3 }, effect: '+30 seconds, or first letters shown', games: ['cw', 'cw+ttt'] },
+  scarf:   { name: 'Cozy Scarf',    need: { cotton: 3 }, effect: 'The storm gets sleepy', games: ['ttt', 'pegs+ttt', 'mew+ttt', 'cw+ttt'] },
+  jam:     { name: 'Rainbow Jam',   need: { wheat: 1, cotton: 1, flowers: 1, pumpkin: 1 }, effect: 'A second chance if you lose', games: ['*'] },
+};
 
 // What the night-time delivery service sells.
 export const CATALOG = [
@@ -24,7 +48,7 @@ export const CATALOG = [
   { id: 'seed:pumpkin', name: 'Pumpkin seeds', icon: 'pumpkin', price: 18, note: 'Ready after 3 nights' },
   { id: 'lumber',       name: 'Lumber',        icon: 'lumber',  price: 10, note: 'For furniture and frames' },
   { id: 'fabric',       name: 'Fabric',        icon: 'fabric',  price: 12, note: 'For anything soft' },
-  { id: 'kit',          name: 'Planter kit',   icon: 'kit',     price: null, note: 'Build another attic planter' },
+  { id: 'kit',          name: 'Planter kit',   icon: 'kit',     price: null, note: 'Build a clay pot planter in any empty spot' },
   { id: 'arcade',       name: 'Arcade cabinet', icon: 'arcade', price: 120,  note: 'Magical Mewdoku, 100 levels, right in the cabin' },
 ];
 

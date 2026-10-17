@@ -16,7 +16,7 @@ export const PUZZLES = [
 // Every answer/clue pair, de-duplicated, for the word mashups.
 export const WORDS = [...new Map(PUZZLES.flatMap(p => p.rows.map((w, i) => [w, { word: w, clue: p.clues[i] }]))).values()];
 
-export function play(root, { difficulty: d, sfx }) {
+export function play(root, { difficulty: d, sfx, boost }) {
   const pool = PUZZLES.filter(p => d > 0.45 || p.rows.length === 4);
   const P = pool[(Math.random() * pool.length) | 0];
   const n = P.rows.length;
@@ -27,7 +27,7 @@ export function play(root, { difficulty: d, sfx }) {
   while (given.size < prefill) given.add((Math.random() * n * n) | 0);
   given.forEach(i => (grid[i] = answer[i]));
 
-  const limit = (n === 4 ? 100 - 30 * d : 150 - 40 * d) * 1000;
+  const limit = ((n === 4 ? 100 - 30 * d : 150 - 40 * d) + (boost === 'toast' ? 30 : 0)) * 1000;
   let left = limit, sel = [...Array(n * n).keys()].find(i => !given.has(i)) ?? 0, dir = 'across', done = false;
 
   const ui = mount(root, { title: 'Word Square', tip: 'Every row matches its column. Fill the square before time runs out.' });

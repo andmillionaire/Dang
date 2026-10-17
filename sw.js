@@ -1,5 +1,5 @@
 // Offline-first service worker. Bump VERSION whenever app files change.
-const VERSION = 'dang-0.7.1'; // keep in step with js/version.js
+const VERSION = 'dang-0.8.0'; // keep in step with js/version.js
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/arcade/arcade.js',
@@ -27,6 +27,7 @@ const SHELL = [
   'js/minigames/peggle.js',
   'js/minigames/tictacclue.js',
   'js/minigames/tictactoe.js',
+  'js/pantry.js',
   'js/pet.js',
   'js/phone.js',
   'js/pixel.js',

@@ -87,8 +87,15 @@
       <div class="inv"></div>
       <div class="stage"><canvas id="farmCanvas" aria-label="Attic farm"></canvas></div>
       <nav class="actions">
-        <p class="tip">Tap a planter. The leaky roof waters everything overnight.</p>
-        <button id="downBtn" class="btn">Downstairs</button>
+        <div class="wall-nav">
+          <button id="wallPrev" class="btn small" aria-label="Turn left">◀</button>
+          <p class="tip" id="wallLabel">North wall</p>
+          <button id="wallNext" class="btn small" aria-label="Turn right">▶</button>
+        </div>
+        <div class="row">
+          <button id="pantryBtn" class="btn"><img data-icon="boost_jam"> Pantry</button>
+          <button id="downBtn" class="btn">Downstairs</button>
+        </div>
       </nav>
     </section>
   </main>

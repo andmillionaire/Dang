@@ -1,8 +1,9 @@
 import { S, persist } from './state.js';
-import { DECOR, CROPS, MATERIALS, LEVELS_PER_DAY, DELIVERY_CONTACT, levelConfig } from './data.js';
+import { DECOR, CROPS, MATERIALS, LEVELS_PER_DAY, DELIVERY_CONTACT, WALLS, SPOTS_PER_WALL, levelConfig } from './data.js';
 import { Board } from './match3.js';
 import { Cabin } from './cabin.js';
 import { Attic, cropProgress, growOvernight } from './farm.js';
+import { openPantry, askBoost } from './pantry.js';
 import { Bedroom } from './bedroom.js';
 import { mountCreator } from './creator.js';
 import { openPhone } from './phone.js';
@@ -36,7 +37,16 @@ const cabin = new Cabin($('#cabinCanvas'), {
   onHero: () => sfx('sparkle'),
   onArcade: openArcade,
 });
-const attic = new Attic($('#farmCanvas'), { sfx, onHatch: () => show('cabin'), changed: updateHud });
+const attic = new Attic($('#farmCanvas'), {
+  sfx,
+  onHatch: () => show('cabin'),
+  changed: () => { updateHud(); attic.hooks.onWall(attic.wall); },
+  onWall: w => {
+    const spots = S.planters.slice(w * SPOTS_PER_WALL, (w + 1) * SPOTS_PER_WALL);
+    const ready = spots.filter(p => p.crop && cropProgress(p) >= 1).length;
+    $('#wallLabel').textContent = `${WALLS[w]} wall · ${spots.filter(p => p.level).length}/${SPOTS_PER_WALL} planters${ready ? ` · ${ready} ready` : ''}`;
+  },
+});
 const board = new Board($('#boardCanvas'), {
   sfx,
   toast,
@@ -71,7 +81,7 @@ function updateHud() {
   $('#dayText').textContent = `Day ${S.day}`;
   const inv = [...Object.keys(CROPS), ...Object.keys(MATERIALS)].map(k => h('span', { class: 'res' }, icon(k), h('span', {}, have(k))));
   document.querySelectorAll('.inv').forEach(el => el.replaceChildren(...inv.map(n => n.cloneNode(true))));
-  const ready = S.plots.slice(0, S.plotsOwned).some(p => p.crop && cropProgress(p) >= 1);
+  const ready = S.planters.some(p => p.level && p.crop && cropProgress(p) >= 1);
   $('#upBtn').classList.toggle('ping', ready);
   $('#soundBtn img').src = iconURL(S.sound ? 'sndOn' : 'sndOff');
   $('#sleepLabel').textContent = `Day ${S.day + 1}`;
@@ -220,6 +230,7 @@ async function runSpecial(b, kinds) {
     return 'win';
   }
   const game = gameFor(kinds);
+  const boost = await askBoost(game.key, game.name);
   const quit = $('#quitBtn');
   quit.disabled = true;
   $('#mTip').textContent = kinds.length > 1 ? `Mashup! The board is turning into ${game.name}!` : `The board is turning into ${game.name}!`;
@@ -228,7 +239,7 @@ async function runSpecial(b, kinds) {
   const box = $('#morph');
   box.hidden = false;
   const playOnce = async () => {
-    let r = await game.play({ root: box, difficulty: b.cfg.difficulty, sfx });
+    let r = await game.play({ root: box, difficulty: b.cfg.difficulty, sfx, boost });
     if (r === 'draw' && p.tieWins) { toast('Saturn Guardian: a tie counts as a win!'); r = 'win'; }
     return r;
   };
@@ -236,6 +247,10 @@ async function runSpecial(b, kinds) {
   if (res !== 'win' && p.retry && !run.retryUsed) {
     run.retryUsed = true;
     toast('The Saturn Crystal glows. One more try!');
+    res = await playOnce();
+  }
+  if (res !== 'win' && boost === 'jam') {
+    toast('A spoonful of Rainbow Jam. Second chance!');
     res = await playOnce();
   }
   box.hidden = true;
@@ -368,6 +383,9 @@ async function goToSleep() {
 $('#phoneBtn').addEventListener('click', () => openPhone({ sfx, changed: updateHud }));
 $('#upBtn').addEventListener('click', () => show('farm'));
 $('#downBtn').addEventListener('click', () => show('cabin'));
+$('#wallPrev').addEventListener('click', () => attic.turn(-1));
+$('#wallNext').addEventListener('click', () => attic.turn(1));
+$('#pantryBtn').addEventListener('click', () => openPantry({ sfx, changed: () => { updateHud(); attic.hooks.onWall(attic.wall); } }));
 $('#decorBtn').addEventListener('click', openDecor);
 $('#wardBtn').addEventListener('click', () => openWardrobe({ sfx, changed: updateHud, onMirror: () => { $('#modal').hidden = true; openCreator(true); } }));
 $('#sleepBtn').addEventListener('click', goToSleep);

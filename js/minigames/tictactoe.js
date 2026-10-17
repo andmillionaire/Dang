@@ -40,8 +40,11 @@ export function aiMove(b, skill) {
 const MAX_TIES = 2;
 
 // Resolves 'win' | 'lose' | 'draw'. Ties replay up to MAX_TIES times.
-export function play(root, { difficulty, sfx }) {
-  const skill = 0.35 + 0.5 * difficulty;
+// The storm's chance of a perfect move; a Cozy Scarf makes it sleepy.
+export const stormSkill = (d, boost) => Math.max(0.1, 0.35 + 0.5 * d - (boost === 'scarf' ? 0.3 : 0));
+
+export function play(root, { difficulty, sfx, boost }) {
+  const skill = stormSkill(difficulty, boost);
   const ui = mount(root, { title: 'Tic-Tac-Toe', tip: 'Get three warm X’s in a row before the storm does.' });
   const grid = h('div', { class: 'ttt-grid' });
   ui.body.append(grid);

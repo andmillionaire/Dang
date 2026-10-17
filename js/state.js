@@ -1,4 +1,4 @@
-import { CROPS } from './data.js';
+import { CROPS, SPOT_COUNT } from './data.js';
 
 const KEY = 'dang-cabin-v1';
 
@@ -16,8 +16,9 @@ const fresh = () => ({
   seeds: { wheat: 1, cotton: 0, flowers: 0, pumpkin: 0 },
   mats: { lumber: 0, fabric: 0, kit: 0 },
   decor: {},
-  plots: Array.from({ length: 6 }, () => ({ crop: null, nights: 0 })),
-  plotsOwned: 1,
+  // 16 planter spots (4 per wall). level 0 = empty spot.
+  planters: Array.from({ length: SPOT_COUNT }, (_, i) => ({ level: i === 0 ? 1 : 0, crop: null, nights: 0 })),
+  boosts: {},
   wardrobe: { owned: { casual: true }, equip: { head: null, outfit: 'casual', held: null, brooch: null } },
   stats: { miniWins: 0, blasts: 0 },
   arcade: { owned: false, meowdoku: { unlocked: 1, best: {} } },
@@ -37,7 +38,13 @@ function migrate(saved) {
     delete s.supplies;
     delete s.farmUnlocked;
   }
-  for (const k of ['today', 'crops', 'seeds', 'mats', 'stats', 'wardrobe', 'arcade']) s[k] = { ...base[k], ...s[k] };
+  // One-wall farm (plots/plotsOwned) -> four walls of planters.
+  if (saved.plots && !saved.planters) {
+    s.planters = base.planters.map((p, i) => (i < (saved.plotsOwned || 1) ? { level: 1, ...(saved.plots[i] || { crop: null, nights: 0 }) } : { level: 0, crop: null, nights: 0 }));
+    delete s.plots;
+    delete s.plotsOwned;
+  }
+  for (const k of ['today', 'crops', 'seeds', 'mats', 'stats', 'wardrobe', 'arcade', 'boosts']) s[k] = { ...base[k], ...s[k] };
   s.arcade.meowdoku = { ...base.arcade.meowdoku, ...s.arcade.meowdoku };
   s.wardrobe.equip = { ...base.wardrobe.equip, ...s.wardrobe.equip };
   s.v = 2;

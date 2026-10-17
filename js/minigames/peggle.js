@@ -3,7 +3,7 @@ import { fitCanvas, toLogical, sleep } from '../pixel.js';
 import { PEGS, BALL, CATS } from '../sprites.js';
 import { CAT_BREEDS } from '../spritedata.js';
 import { mount, banner } from './common.js';
-import { aiMove, outcome } from './tictactoe.js';
+import { aiMove, outcome, stormSkill } from './tictactoe.js';
 import { WORDS } from './crossword.js';
 
 const LW = 120, LH = 156;
@@ -35,7 +35,7 @@ function scatter() {
 const clearAround = (pegs, special, gap) => pegs.filter(p => special.every(s => Math.hypot(p.x - s.x, p.y - s.y) > gap));
 
 // Star Pegs and its mashups. mode: 'pegs' | 'ttt' (Peg-Tac-Toe) | 'word' (Letter Pegs) | 'cats' (Cat Pegs).
-export function play(root, { difficulty: d, sfx, mode = 'pegs' }) {
+export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
   const TITLES = {
     pegs: ['Star Pegs', 'Drag to aim, let go to shoot. Clear every orange peg.'],
     ttt: ['Peg-Tac-Toe', 'Light the gold pegs to claim squares. The storm claims one after each shot. Get three in a row!'],
@@ -46,7 +46,7 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs' }) {
   const canvas = h('canvas', { class: 'pegs-canvas' });
   ui.body.append(h('div', { class: 'mg-canvas' }, canvas));
 
-  let balls = 6 - Math.round(d * 2);
+  let balls = 6 - Math.round(d * 2) + (boost === 'snack' ? 2 : 0);
   let pegs, board = null, word = null, order = null, need = 0;
   if (mode === 'ttt') {
     const grid = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => ({ x: 30 + (i % 3) * 30, y: 54 + ((i / 3) | 0) * 30, r: 3, kind: 'gold', sq: i }));
@@ -185,7 +185,7 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs' }) {
       if (mode === 'ttt') {
         if (outcome(board)) return finish('lose', 'The board filled up without a line.');
         await sleep(300);
-        const i = aiMove(board, 0.35 + 0.5 * d);
+        const i = aiMove(board, stormSkill(d, boost));
         board[i] = 'O';
         const peg = pegs.find(p => p.sq === i);
         peg.gone = true;

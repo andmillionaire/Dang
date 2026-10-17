@@ -3,6 +3,7 @@ import { sleep } from '../pixel.js';
 import { CAT_BREEDS } from '../spritedata.js';
 import { generate } from '../sudoku.js';
 import { mount, banner } from './common.js';
+import { stormSkill } from './tictactoe.js';
 
 // Tic-tac-toe on a 4x4 cat sudoku: place the right cat to claim a square. Wrong cat = lost turn.
 const N = 4;
@@ -15,12 +16,12 @@ for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
 }
 const lineOf = (owner, who) => LINES.find(l => l.every(i => owner[i] === who));
 
-export function play(root, { difficulty: d, sfx }) {
+export function play(root, { difficulty: d, sfx, boost }) {
   const ui = mount(root, { title: 'Cat-Tac-Toe', tip: 'Place the right cat to claim a square. Three of your squares in a row wins!' });
   const { puzzle, solution } = generate(N, 5);
   const grid = puzzle.slice();
   const owner = Array(N * N).fill(null);
-  const skill = 0.35 + 0.5 * d;
+  const skill = stormSkill(d, boost);
   let sel = -1, locked = false, done = false;
 
   const cells = grid.map((_, i) => h('button', {

@@ -515,3 +515,13 @@ html, button, input, .sd-cell, .cw-cell, .ttt-cell { touch-action: manipulation;
 .md-cell.locked::after { content: ''; position: absolute; right: 2px; bottom: 2px; width: 5px; height: 5px; background: var(--ink); opacity: .55; }
 .md-cell.hint { animation: hintglow .6s steps(2) infinite; }
 @keyframes hintglow { 50% { box-shadow: inset 0 0 0 4px #fff8e0, 0 0 0 2px #ffe27a; } }
+
+/* ---------- attic farm ---------- */
+.wall-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wall-nav .tip { flex: 1; justify-content: center; text-align: center; color: var(--cream); }
+.wall-nav .btn { width: 48px; }
+.upgrade { display: flex; align-items: center; gap: 10px; background: #2a1a14; padding: 8px 10px; margin-top: 10px; box-shadow: inset 4px 0 0 var(--gold); }
+.pantry-tabs { margin-bottom: 8px; }
+.pantry-tabs .seg-btn { flex: 1; }
+.owned-count { color: var(--gold); font-weight: 400; }
+#pantryBtn .ico { width: 18px; height: 18px; }

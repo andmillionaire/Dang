@@ -14,6 +14,19 @@ A cozy pixel-art match-3 for phones, set in a cabin where it never stops raining
    - **Arcade:** once you've bought the cabinet.
    - **Sleep:** start the next day.
 
+## The attic farm
+
+Turn between the attic's four walls (◀ ▶ or swipe), each with four planter spots. A planter kit from Jeff builds a clay pot in any empty spot; upgrade it with lumber, fabric and coins:
+
+| Level | Planter | Plants per seed packet | Upgrade |
+| --- | --- | --- | --- |
+| 1 | Clay pot | 1 | planter kit |
+| 2 | Wooden box | 2 | 2 lumber, 20 coins |
+| 3 | Raised bed | 3 | 4 lumber, 1 fabric, 45 coins |
+| 4 | Greenhouse bed | 4, and crops grow a night faster | 6 lumber, 2 fabric, 90 coins |
+
+The **Pantry** sells crops for coins (wheat 3, cotton 5, flowers 8, pumpkin 14) and crafts them into mini-game boosts: Catnip Tea (+1 heart), Pumpkin Snack (+2 balls), Honey Toast (+30 s, or first letters in Tic-Tac-Clue), Cozy Scarf (the storm plays worse) and Rainbow Jam (a second chance). When a charged tile starts a mini-game you're offered the boosts that fit it. Prices and recipes live in `js/data.js`.
+
 ## Charged tiles and mini-games
 
 Bigger match shapes leave a charged tile on the board. Tap it and the board morphs into its mini-game. Win and it blasts. Lose and it fizzles.
@@ -86,7 +99,8 @@ Open the HTTPS site on a phone: tap **Install** (Android/Chrome) or Share → *A
 | `tools/` | Icon and Mewdoku level generators |
 | `js/leaderboard.js`, `server/server.js` | Leaderboard client (with offline fallback) and the Node server |
 | `js/hero.js`, `js/herodata.js`, `js/creator.js` | Layered character art, creator, wardrobe perks |
-| `js/bedroom.js`, `js/cabin.js`, `js/farm.js` | Morning, night cabin and attic scenes, drawn in code |
+| `js/bedroom.js`, `js/cabin.js`, `js/farm.js` | Morning, night cabin and the four-wall attic farm, drawn in code |
+| `js/pantry.js` | Selling crops, crafting boosts, and the boost prompt before mini-games |
 | `js/phone.js`, `js/wardrobe.js` | Night-time phone ordering and the wardrobe |
 | `js/data.js` | Tunables: levels, crops, catalog, decor, wardrobe, `DELIVERY_CONTACT` |
 | `js/spritedata.js`, `js/sprites.js` | Hand-made pixel sprites as character grids |

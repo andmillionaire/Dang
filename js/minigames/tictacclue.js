@@ -1,16 +1,18 @@
 import { h } from '../ui.js';
 import { sleep } from '../pixel.js';
 import { mount, banner } from './common.js';
-import { outcome, aiMove } from './tictactoe.js';
+import { outcome, aiMove, stormSkill } from './tictactoe.js';
 import { WORDS } from './crossword.js';
 import { keyboard } from './keyboard.js';
 
 // Tic-tac-toe where each square hides a clue. Answer it to claim the square.
-export function play(root, { difficulty: d, sfx }) {
+export function play(root, { difficulty: d, sfx, boost }) {
   const ui = mount(root, { title: 'Tic-Tac-Clue', tip: 'Pick a square and answer its clue to claim it. A wrong answer ends your turn.' });
   const words = [...WORDS].sort(() => Math.random() - 0.5).slice(0, 9);
   const board = Array(9).fill(null);
-  const skill = 0.35 + 0.5 * d;
+  const skill = stormSkill(d, boost);
+  // Honey Toast shows the first letter of every answer.
+  const given = boost === 'toast' ? 1 : 0;
   let sel = -1, typed = '', locked = false, done = false;
 
   // Buttons are built before the game's handlers exist; they forward through `act`.
@@ -63,7 +65,7 @@ export function play(root, { difficulty: d, sfx }) {
     function pick(i) {
       if (locked || done || board[i]) return;
       sel = i;
-      typed = '';
+      typed = words[i].word.slice(0, given);
       clue.replaceChildren(h('b', {}, `${words[i].word.length} letters: `), words[i].clue);
       sfx('select');
       render();
@@ -72,7 +74,7 @@ export function play(root, { difficulty: d, sfx }) {
     Object.assign(act, { pick, key });
     async function key(k) {
       if (locked || done || sel < 0) return;
-      if (k === '⌫') typed = typed.slice(0, -1);
+      if (k === '⌫') typed = typed.length > given ? typed.slice(0, -1) : typed;
       else if (typed.length < words[sel].word.length) { typed += k; sfx('type'); }
       render();
       if (typed.length === words[sel].word.length) submit();
