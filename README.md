@@ -78,7 +78,7 @@ The microgames are: Patch it! (tape the roof leaks), Pop 'em!, Stop! (needle in 
 
 ## Mewdoku rules (mini-game and arcade)
 
-An N×N board split into N coloured regions, following Meowdoku's rules. Place exactly **one piece in every row, every column and every coloured region**, and no two pieces may **touch, not even diagonally**. Each puzzle starts with one piece locked in place. Tap a square once to mark it ✕, tap it again to place a piece (or switch the tap mode to place directly), and tap a placed piece to pick it up. Placing a piece that breaks a rule costs one of 3 hearts, and the board says which rule it broke. Undo, Restart, an optional Auto ✕ that marks squares ruled out by placed pieces, and a hint that points at the next square logic can prove without placing anything.
+An N×N board split into N coloured regions, following Meowdoku's rules. Place exactly **one piece in every row, every column and every coloured region**, and no two pieces may **touch, not even diagonally**. Each puzzle starts with one piece locked in place. Tap a square to place a piece (the pieces still to place sit in a tray above the board; switch to ✕ mode to mark squares, then tap a ✕ again to place), and tap a placed piece to pick it up. Placing a piece that breaks a rule costs one of 3 hearts, and the board says which rule it broke. Undo, Restart, an optional Auto ✕ that marks squares ruled out by placed pieces, and a hint that points at the next square logic can prove without placing anything.
 
 Every puzzle has exactly one solution and can be solved by logic alone, with no guessing: `js/meowdoku-engine.js` generates puzzles and checks them with a solver that only uses human-style deductions. The cat tile's mini-game plays 5×5 and 6×6 boards with cats.
 

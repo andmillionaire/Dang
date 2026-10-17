@@ -741,3 +741,7 @@ div.word-slots b.on { background: var(--gold); animation: placeIn .3s cubic-bezi
   .mc-fuse.low i, .md-cell.lit, .mc-tempt, .mc-flame { animation: none; }
 }
 .md-help.warn { color: #ff9a8a; }
+.md-tray { display: flex; gap: 4px; justify-content: center; }
+.md-tray-slot { width: 36px; height: 36px; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--ink); transition: opacity .2s, transform .2s; }
+.md-tray-slot .ico { width: 82%; height: 82%; }
+.md-tray-slot.used { opacity: .25; transform: scale(.85); }

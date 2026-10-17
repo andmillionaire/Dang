@@ -27,7 +27,7 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
   if (lockedCell >= 0) cat[lockedCell] = true;
   const state = { mistakes: 0, hints: 0, done: false };
   const history = [];
-  let mode = 'mark', autoX = false, hintCell = -1, hintTimer = 0, msgTimer = 0;
+  let mode = 'place', autoX = false, hintCell = -1, hintTimer = 0, msgTimer = 0;
 
   const R = i => (i / N) | 0, C = i => i % N;
   const sees = (i, j) => i !== j && (R(i) === R(j) || C(i) === C(j) || regions[i] === regions[j] || (Math.abs(R(i) - R(j)) <= 1 && Math.abs(C(i) - C(j)) <= 1));
@@ -53,17 +53,22 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
       down = null;
     });
     b.addEventListener('pointercancel', () => (down = null));
+    // fallback for browsers where pointer events don't arrive; tapOnce drops the duplicate
+    b.addEventListener('click', () => tapOnce(i));
     b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapOnce(i); } });
     return b;
   });
 
   const modeBtns = [
-    h('button', { type: 'button', class: 'seg-btn on', onclick: () => setMode('mark') }, 'Tap: ✕'),
-    h('button', { type: 'button', class: 'seg-btn', onclick: () => setMode('place') }, `Tap: ${pieceName}`),
+    h('button', { type: 'button', class: 'seg-btn', onclick: () => setMode('mark') }, 'Tap: ✕'),
+    h('button', { type: 'button', class: 'seg-btn on', onclick: () => setMode('place') }, `Tap: ${pieceName}`),
   ];
   const autoBtn = h('button', { type: 'button', class: 'seg-btn', onclick: () => { autoX = !autoX; autoBtn.classList.toggle('on', autoX); sfx('select'); render(); } }, 'Auto ✕');
   const help = h('p', { class: 'muted small center md-help' });
+  // one piece per colour; it dims once that colour has its piece
+  const tray = [...Array(N).keys()].map(g => h('span', { class: 'md-tray-slot', style: `background:${REGION_COLORS[g]}` }, piece(g)));
   host.append(
+    h('div', { class: 'md-tray', 'aria-label': `${pieceName}s to place` }, tray),
     h('div', { class: 'md-wrap' }, h('div', { class: `md-grid n${N}`, style: `grid-template-columns: repeat(${N}, 1fr)` }, cells)),
     h('div', { class: 'md-tools' },
       h('div', { class: 'seg' }, modeBtns),
@@ -75,7 +80,7 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
   let lastTap = { i: -1, t: 0 };
   function tapOnce(i) {
     const now = performance.now();
-    if (lastTap.i === i && now - lastTap.t < 150) return;
+    if (lastTap.i === i && now - lastTap.t < 450) return;
     lastTap = { i, t: now };
     tap(i);
   }
@@ -111,6 +116,8 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
       b.replaceChildren(cat[i] ? piece(regions[i]) : mark[i] ? h('span', { class: 'md-x' }, '✕') : ruledOut ? h('span', { class: 'md-dot' }) : '');
       if (regionLabel && !cat[i]) b.append(h('span', { class: 'md-lab' }, regionLabel(regions[i])));
     });
+    const used = new Set(placed.map(i => regions[i]));
+    tray.forEach((t, g) => t.classList.toggle('used', used.has(g)));
     if (!help.classList.contains('warn')) help.textContent = mode === 'mark'
       ? `Tap once for ✕, tap again for a ${pieceName} · tap a ${pieceName} to pick it up`
       : `Tap to place a ${pieceName} · tap a ${pieceName} to pick it up`;
