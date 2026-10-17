@@ -24,6 +24,25 @@ Installing needs HTTPS (localhost works too). Push to `main` and the included wo
 - **Android / Chrome:** tap the in-game **Install** button, or use *Add to Home screen*.
 - **iOS / Safari:** Share → *Add to Home Screen*.
 
+### Self-hosting (Unraid + Cloudflare Tunnel)
+
+```sh
+mkdir -p /mnt/user/appdata/dang
+docker run --rm -v /mnt/user/appdata/dang:/git alpine/git clone https://github.com/andmillionaire/Dang.git site
+docker run -d --name dang --restart unless-stopped -p 8088:80 \
+  -v /mnt/user/appdata/dang/site:/usr/share/nginx/html:ro \
+  -v /mnt/user/appdata/dang/site/deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro \
+  nginx:alpine
+```
+
+Auto-update every 15 minutes (User Scripts plugin):
+
+```sh
+docker run --rm -v /mnt/user/appdata/dang/site:/git alpine/git pull --ff-only && docker exec dang nginx -s reload
+```
+
+In Cloudflare Zero Trust → Tunnels → Public Hostname, point `game.example.com` at `http://192.168.1.116:8088` (or `http://dang:80` if cloudflared shares a Docker network with the container). `deploy/nginx.conf` sends `no-cache` for `index.html`, `sw.js` and the manifest so Cloudflare doesn't hold back updates. Turn Rocket Loader off for the hostname.
+
 It works offline after the first load. When you change app files, bump `VERSION` in `sw.js` so players get the update.
 
 ## Code map
