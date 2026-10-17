@@ -2,6 +2,7 @@ import { fitCanvas, sleep } from './pixel.js';
 import { RainWindow } from './rainview.js';
 import { S } from './state.js';
 import { heroSprite, drawHero, W, H } from './hero.js';
+import { drawSleepingPet } from './pet.js';
 
 const LW = 144, LH = 208;
 const WX = 40, WY = 24, WW = 64, WH = 48;
@@ -113,6 +114,9 @@ export class Bedroom {
       R(['#a46ad0', '#f08ab0', '#efdcb4', '#8fd0b0'][(i + j * 2) % 4], 34 + i * 4, 138 + j * 4, 4, 4);
     }
     R('#6a3e94', 34, 158, 72, 2);
+
+    R('#8a4a6a', 46, 180, 32, 10); R('#a46ad0', 48, 182, 28, 6);
+    drawSleepingPet(ctx, 54, 176, now);
 
     // nightstand + alarm clock
     R('#6b3d22', 120, 152, 18, 24); R('#8a5a34', 120, 152, 18, 2); R('#4e2e1c', 122, 162, 14, 1);

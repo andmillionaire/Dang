@@ -8,6 +8,7 @@ import { mountCreator } from './creator.js';
 import { openPhone } from './phone.js';
 import { openWardrobe } from './wardrobe.js';
 import { mountArcade } from './arcade/arcade.js';
+import { petArrives, petSound } from './pet.js';
 import { GAMES, gameFor } from './minigames/index.js';
 import { perks, kid } from './hero.js';
 import { startBgRain } from './bgrain.js';
@@ -29,7 +30,7 @@ const bedroom = new Bedroom($('#bedroomCanvas'), { sfx });
 const cabin = new Cabin($('#cabinCanvas'), {
   sfx,
   onLadder: () => show('farm'),
-  onCat: () => sfx('purr'),
+  onPet: () => { sfx(petSound()); toast(S.pet.kind === 'dog' ? `${S.pet.name} thumps their tail sleepily.` : `${S.pet.name} purrs without opening an eye.`); },
   onHero: () => sfx('sparkle'),
   onArcade: openArcade,
 });
@@ -313,6 +314,7 @@ async function nightfall() {
   persist();
   await interlude({ iconName: 'moon', title: `Night falls on day ${S.day}`, text: `You earned ${S.today.earned} coins today.` });
   show('cabin');
+  if (await maybePet()) return;
   if (!S.seen.night) {
     S.seen.night = true;
     persist();
@@ -327,6 +329,15 @@ async function nightfall() {
       buttons: [{ label: 'Cozy', cls: 'primary' }],
     });
   }
+}
+
+// From night 2 on, if you don't have a pet yet, something scratches at the door.
+async function maybePet() {
+  if (S.pet || S.day < 2 || !S.hero) return false;
+  await sleep(700);
+  await petArrives({ sfx });
+  updateHud();
+  return true;
 }
 
 async function goToSleep() {
@@ -396,7 +407,7 @@ function buy(d) {
   sfx('coin');
   updateHud();
   $('#modal').hidden = true;
-  toast(d.id === 'catbed' ? 'A damp cat wanders in and claims the bed.' : `${d.name} built. So cozy.`);
+  toast(d.id === 'catbed' && S.pet ? `${S.pet.name} claims the bed immediately.` : `${d.name} built. So cozy.`);
 }
 
 // ---------- install ----------
@@ -421,7 +432,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 // ---------- boot ----------
 if (!S.hero) openCreator(false);
-else if (S.phase === 'night') show('cabin');
+else if (S.phase === 'night') { show('cabin'); maybePet(); }
 else morning();
 
 if (new URLSearchParams(location.search).has('debug')) {

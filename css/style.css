@@ -431,3 +431,29 @@ main { flex: 1; min-height: 0; position: relative; }
 .small-reward { font-size: 20px !important; }
 .match-foot .tip { display: block; }
 .match-foot .tip .ico { vertical-align: -2px; }
+
+/* ---------- visual novel ---------- */
+.vn {
+  position: fixed; inset: 0; z-index: 28; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px;
+  padding: calc(var(--safe-t) + 12px) 12px calc(var(--safe-b) + 14px);
+  background: rgba(10, 6, 18, .88); animation: fade .4s;
+}
+.vn-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.vn-box {
+  position: relative; background: #24305a; padding: 22px 16px 16px; min-height: 140px; cursor: pointer;
+  box-shadow: 0 0 0 var(--px) var(--ink), 0 0 0 calc(var(--px) * 2) #9fd3f2;
+  max-width: 520px; width: 100%; margin: 0 auto;
+}
+.vn-name {
+  position: absolute; top: -16px; left: 12px; background: #e86aa8; color: var(--ink); padding: 2px 12px; font-size: 21px;
+  box-shadow: 0 0 0 var(--px) var(--ink);
+}
+.vn-text { margin: 0; font-size: 22px; line-height: 1.3; min-height: 2.6em; color: var(--cream); }
+.vn-more { position: absolute; right: 12px; bottom: 6px; color: #9fd3f2; animation: blink .8s steps(2) infinite; }
+.vn-extra { display: grid; gap: 8px; margin-top: 10px; }
+.vn-extra:empty { display: none; }
+.vn-choice { background: #3a4a7a; }
+.vn-choice:hover { background: #4a5a8a; }
+.vn-extra .name-input { width: 100%; }
+.vn-suggest { display: flex; flex-wrap: wrap; gap: 8px; }
+.vn-suggest .chip { font-size: 18px; }

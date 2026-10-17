@@ -3,19 +3,21 @@ import { RainWindow } from './rainview.js';
 import { S } from './state.js';
 import { drawHero, fullSaturn, W as HW } from './hero.js';
 import { GIRLS } from './sprites.js';
+import { drawSleepingPet } from './pet.js';
 
 const LW = 144, LH = 208;
 const WX = 48, WY = 26, WW = 48, WH = 56;
 const FLOOR = 152;
 const HERO = { x: 28, y: 160 };
+const PET_FIRE = { x: 12, y: 153 }, PET_BED = { x: 67, y: 170 };
 
 export class Cabin {
   constructor(canvas, hooks) {
     this.canvas = canvas;
-    this.hooks = hooks; // onLadder, onCat, sfx
+    this.hooks = hooks; // onLadder, onPet, onHero, onArcade, sfx
     this.win = new RainWindow(WW, WH, { onThunder: () => hooks.sfx('thunder') });
     this.active = false;
-    this.purrUntil = 0;
+    this.petUntil = 0;
     this.sparkleAt = 0;
     this.win.moon = true;
     canvas.addEventListener('pointerdown', e => {
@@ -23,7 +25,7 @@ export class Cabin {
       if (p.x >= HERO.x - 2 && p.x <= HERO.x + HW + 2 && p.y >= HERO.y - 4 && p.y <= HERO.y + 28) { this.sparkleAt = performance.now(); hooks.onHero(); }
       else if (S.arcade.owned && p.x >= 114 && p.x <= 142 && p.y >= 140 && p.y <= 200) hooks.onArcade();
       else if (p.x >= 108 && p.x <= 138 && p.y < FLOOR) hooks.onLadder();
-      else if (S.decor.catbed && p.x >= 58 && p.x <= 90 && p.y >= 160) { this.purrUntil = performance.now() + 1500; hooks.onCat(); }
+      else if (S.pet && Math.abs(p.x - ((S.decor.catbed ? PET_BED : PET_FIRE).x + 8)) <= 11 && Math.abs(p.y - ((S.decor.catbed ? PET_BED : PET_FIRE).y + 4)) <= 9) { this.petUntil = performance.now() + 1500; hooks.onPet(); }
       else if (p.x >= WX && p.x <= WX + WW && p.y >= WY && p.y <= WY + WH) this.win.strike();
     });
   }
@@ -203,12 +205,12 @@ export class Cabin {
     }
 
     if (D.fern) {
-      R('#a0663a', 8, 174, 10, 10); R('#6b3d22', 8, 174, 10, 2); R('#6b3d22', 9, 184, 8, 2);
+      R('#a0663a', 98, 174, 10, 10); R('#6b3d22', 98, 174, 10, 2); R('#6b3d22', 99, 184, 8, 2);
       const leaves = [[-6, -10], [-4, -14], [0, -16], [4, -14], [7, -9], [-8, -5], [9, -4]];
       for (const [dx, dy] of leaves) {
         const sway = Math.round(Math.sin(now / 1200 + dx) * 0.6);
         for (let k = 0; k <= 8; k++) {
-          const x = 13 + Math.round((dx * k) / 8) + (k > 4 ? sway : 0), y = 174 + Math.round((dy * k) / 8);
+          const x = 103 + Math.round((dx * k) / 8) + (k > 4 ? sway : 0), y = 174 + Math.round((dy * k) / 8);
           R(k % 2 ? '#6fb04a' : '#3d7a34', x, y, 1, 1);
         }
       }
@@ -229,18 +231,15 @@ export class Cabin {
     if (D.catbed) {
       R('#6b3d22', 62, 178, 26, 9); R('#8a5a34', 62, 178, 26, 2);
       R('#a46ad0', 64, 176, 22, 4);
-      const purr = now < this.purrUntil ? Math.round(Math.sin(now / 40)) : 0;
-      R('#f39a3a', 67, 170 + purr, 14, 7); R('#c06a20', 70, 171 + purr, 1, 5); R('#c06a20', 74, 171 + purr, 1, 5);
-      R('#f39a3a', 78, 167, 7, 6); R('#f39a3a', 78, 165, 2, 2); R('#f39a3a', 83, 165, 2, 2);
-      R('#f08ab0', 79, 166, 1, 1); R('#f08ab0', 84, 166, 1, 1);
-      R('#1a1220', 79, 170, 2, 1); R('#1a1220', 82, 170, 2, 1); R('#f08ab0', 81, 171, 1, 1);
-      const tail = Math.round(Math.sin(now / 500) * 2);
-      R('#f39a3a', 63, 174 + tail, 5, 2); R('#c06a20', 62, 174 + tail, 2, 2);
-      const z = (now / 1400) % 1;
-      ctx.globalAlpha = 1 - z;
-      const zx = 86 + Math.round(z * 6), zy = 162 - Math.round(z * 12);
-      R('#efdcb4', zx, zy, 3, 1); R('#efdcb4', zx + 1, zy + 1, 1, 1); R('#efdcb4', zx, zy + 2, 3, 1);
-      ctx.globalAlpha = 1;
+    }
+    // your pet: in its bed if you built one, otherwise in the warm spot by the fire
+    const pet = D.catbed ? PET_BED : PET_FIRE;
+    const hop = now < this.petUntil ? -Math.round(Math.abs(Math.sin(now / 90)) * 2) : 0;
+    drawSleepingPet(ctx, pet.x, pet.y + hop, now);
+    if (now < this.petUntil && S.pet) {
+      const t = 1 - (this.petUntil - now) / 1500;
+      R('#f08ab0', pet.x + 7, pet.y - 4 - Math.round(t * 10), 1, 1);
+      R('#f08ab0', pet.x + 6, pet.y - 5 - Math.round(t * 10), 3, 1);
     }
 
     // you

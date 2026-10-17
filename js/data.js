@@ -38,7 +38,7 @@ export const DECOR = [
   { id: 'lantern',  name: 'Pumpkin Lantern', need: { pumpkin: 2 }, desc: 'A grin that glows.' },
   { id: 'fern',     name: 'Potted Fern',     need: { lumber: 1, flowers: 2, wheat: 2 }, desc: 'Loves the humidity.' },
   { id: 'lights',   name: 'String Lights',   need: { lumber: 1, fabric: 1, pumpkin: 1, flowers: 2 }, desc: 'Twinkle along the beam.' },
-  { id: 'catbed',   name: 'Cat Bed',         need: { lumber: 3, fabric: 2, cotton: 3, wheat: 2 }, desc: 'Build it and a cat will come.' },
+  { id: 'catbed',   name: 'Pet Bed',         need: { lumber: 3, fabric: 2, cotton: 3, wheat: 2 }, desc: 'Cozier than the floor by the fire.' },
 ];
 
 // Magical-girl wardrobe. Bought with star shards; legendary pieces also need a milestone.

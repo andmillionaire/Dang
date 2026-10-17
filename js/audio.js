@@ -113,6 +113,11 @@ export function sfx(name, arg = 1) {
     case 'ring': [0, 0.12, 0.6, 0.72].forEach(d => tone(880, 0.1, { vol: 0.035, delay: d, type: 'sine' })); break;
     case 'doorbell': tone(784, 0.5, { vol: 0.05, type: 'sine' }); tone(622, 0.7, { vol: 0.05, type: 'sine', delay: 0.4 }); break;
     case 'glaive': burst(0.4, { vol: 0.2, freq: 5000 }); tone(220, 0.6, { vol: 0.06, slide: 880, type: 'sawtooth' }); break;
+    case 'scratch': for (let i = 0; i < 4; i++) burst(0.07, { vol: 0.25, freq: 2500, delay: i * 0.13 }); break;
+    case 'door': tone(180, 0.6, { vol: 0.05, slide: 120, type: 'sawtooth' }); burst(0.5, { vol: 0.08, freq: 600, delay: 0.1 }); break;
+    case 'woof': tone(220, 0.09, { vol: 0.09, slide: 160, type: 'square' }); tone(240, 0.12, { vol: 0.09, slide: 150, type: 'square', delay: 0.18 }); break;
+    case 'meow': tone(700, 0.35, { vol: 0.05, slide: 950, type: 'triangle' }); tone(950, 0.25, { vol: 0.04, slide: 600, type: 'triangle', delay: 0.3 }); break;
+    case 'blip': tone(520 + Math.random() * 60, 0.02, { vol: 0.012, type: 'square' }); break;
     case 'drip': tone(1400 + Math.random() * 400, 0.05, { vol: 0.015, type: 'sine', slide: 700 }); break;
   }
 }

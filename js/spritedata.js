@@ -537,3 +537,63 @@ export const GIRLS = [
   { name: 'Ink',    style: 'long', H: '#2a2438', G: '#4a4060', X: '#d0463c', E: '#c04a8a' },
   { name: 'Saturn', style: 'bob',  H: '#4a2468', G: '#7a4aa0', X: '#a46ad0', E: '#6a3aa0' },
 ];
+
+// ---------- pets ----------
+// o fur, O darker fur, w cream, b black fur, h black-fur shine, y cat eyes, e eye, f nose/tongue.
+export const PET_ROWS = {
+  dogSit: [
+    '....kkkkkkkk....',
+    '...kooooooook...',
+    '..kOkooooookOk..',
+    '.kOOkoeooeokOOk.',
+    '.kOOkoowwookOOk.',
+    '..kOkowkkwokOk..',
+    '...kkowwwwokk...',
+    '....kowffwok....',
+    '....kooooook....',
+    '...kooooooook...',
+    '..koowoooowook..',
+    '..kooowwwwoook..',
+    '..kOooooooooOk..',
+    '..kOookkkkooOk..',
+    '..kwwk....kwwk..',
+    '..kkkk....kkkk..',
+  ],
+  catSit: [
+    '...k........k...',
+    '...kk......kk...',
+    '...khk....khk...',
+    '...khhbbbbhhk...',
+    '...kbbbbbbbbk...',
+    '...kbyybbyybk...',
+    '...kbykbbkybk...',
+    '...kbbbffbbbk...',
+    '....kbbbbbbk....',
+    '....kbbbbbbk....',
+    '...kbbbbbbbbk...',
+    '..kbbhbbbbbbbk..',
+    '..kbbhbbbbbbbk.k',
+    '..kbbbbbbbbbbkbk',
+    '..kbbbkkkkbbbkk.',
+    '..kkkkk..kkkkk..',
+  ],
+  dogSleep: [
+    '.....kkkkkk.....',
+    '...kkooooookk...',
+    '..kooooooooOOk..',
+    '.koowwooooooOk..',
+    'kOokkwooooooook.',
+    'kwwwoooooooooOk.',
+    '.kkkkkkkkkkkkkk.',
+  ],
+  catSleep: [
+    '..k.k...........',
+    '..kbk.kkkkkk....',
+    '.kbbbkbbbbbbkk..',
+    '.khkhbbbbbbbbbk.',
+    '.kbbbbbbbhbbbbk.',
+    '..kbbbbbbbbbbbbk',
+    '...kkkkkkkkkkkk.',
+  ],
+};
+export const PET_PAL = { o: '#e8a848', O: '#b87a28', w: '#f8d8a0', e: '#1a1220', f: '#f08ab0', b: '#2e2838', h: '#4a4058', y: '#ffe27a' };
