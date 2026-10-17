@@ -29,7 +29,7 @@ Swipe two charged tiles together for a **mashup**: Peg-Tac-Toe, Cat-Tac-Toe, Tic
 
 ## Mewdoku rules (mini-game and arcade)
 
-An N×N board split into N coloured regions. Place exactly **one piece in every row, every column and every coloured region**, and no two pieces may **touch, not even diagonally**. Tap a square to mark it ✕, double-tap to place (or switch the tap mode to "place"). A wrong placement costs one of 3 hearts. Squares ruled out by a placed piece get a faint dot.
+An N×N board split into N coloured regions, following Meowdoku's rules. Place exactly **one piece in every row, every column and every coloured region**, and no two pieces may **touch, not even diagonally**. Each puzzle starts with one piece locked in place. Tap a square to mark it ✕, double-tap to place (or switch the tap mode), and tap a placed piece to pick it up. Placing a piece that breaks a rule costs one of 3 hearts. Undo, Restart, an optional Auto ✕ that marks squares ruled out by placed pieces, and a hint that points at the next square logic can prove without placing anything.
 
 Every puzzle has exactly one solution and can be solved by logic alone, with no guessing: `js/meowdoku-engine.js` generates puzzles and checks them with a solver that only uses human-style deductions. The cat tile's mini-game plays 5×5 and 6×6 boards with cats.
 

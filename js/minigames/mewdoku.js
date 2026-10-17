@@ -12,10 +12,12 @@ import { mount, banner, hearts } from './common.js';
 export function play(root, opts) {
   if (opts.wordoku) return playWordoku(root, opts);
   const { difficulty: d, sfx } = opts;
-  const ui = mount(root, { title: 'Mewdoku', tip: 'One cat in every row, column and colour. Cats can’t touch, not even diagonally.' });
+  const ui = mount(root, { title: 'Mewdoku', tip: 'One cat in every row, column and colour. Cats can’t touch, not even diagonally. Start from the locked cat.' });
   const size = d < 0.5 ? 5 : 6;
   const pool = POOL.filter(e => e[1].length === size);
-  const puzzle = transform(decode(pool[(Math.random() * pool.length) | 0]), (Math.random() * 8) | 0);
+  const shuffled = transform(decode(pool[(Math.random() * pool.length) | 0]), (Math.random() * 8) | 0);
+  // Like the real game, start with one cat already locked in place.
+  const puzzle = { ...shuffled, locked: (Math.random() * size) | 0 };
   return new Promise(resolve => {
     meowdokuBoard(ui.body, {
       puzzle, lives: 3, sfx, pieceName: 'cat',

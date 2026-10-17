@@ -91,8 +91,9 @@ function repair(N, reg, sol, alt, rand) {
 }
 
 // ---------- logic solver: only deductions a person would make, no guessing ----------
-// Returns { solved, steps } where steps counts how many deduction rounds were needed.
-export function logicSolve(N, reg) {
+// Returns { solved, steps, cats, order }: steps = deduction rounds needed, order = cells in the
+// order they were proven. `start` lists cells that already hold correct cats.
+export function logicSolve(N, reg, start = []) {
   const NN = N * N;
   const state = new Array(NN).fill(0); // 0 open, 1 cat, -1 ruled out
   const R = i => (i / N) | 0, C = i => i % N;
@@ -111,19 +112,22 @@ export function logicSolve(N, reg) {
     return out;
   };
   const KILLS = [...Array(NN).keys()].map(kills);
-  const place = i => { state[i] = 1; for (const j of KILLS[i]) if (state[j] === 0) state[j] = -1; };
+  const order = [];
+  const place = i => { state[i] = 1; order.push(i); for (const j of KILLS[i]) if (state[j] === 0) state[j] = -1; };
+  for (const i of start) place(i);
+  order.length = 0;
   const open = g => g.filter(i => state[i] === 0);
   const done = g => g.some(i => state[i] === 1);
   let steps = 0;
 
   for (;;) {
-    if (state.filter(v => v === 1).length === N) return { solved: true, steps, cats: [...Array(N).keys()].map(r => state.slice(r * N, r * N + N).indexOf(1)) };
+    if (state.filter(v => v === 1).length === N) return { solved: true, steps, order, cats: [...Array(N).keys()].map(r => state.slice(r * N, r * N + N).indexOf(1)) };
     let progress = false;
     // 1. a row, column or region with a single open cell
     for (const g of groups) {
       if (done(g)) continue;
       const o = open(g);
-      if (o.length === 0) return { solved: false, steps };
+      if (o.length === 0) return { solved: false, steps, order };
       if (o.length === 1) { place(o[0]); progress = true; }
     }
     if (progress) { steps++; continue; }
@@ -166,7 +170,7 @@ export function logicSolve(N, reg) {
       }
     }
     if (progress) { steps++; continue; }
-    return { solved: false, steps };
+    return { solved: false, steps, order };
   }
 }
 
