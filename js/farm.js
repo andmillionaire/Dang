@@ -9,6 +9,7 @@ const LW = 144, LH = 208;
 const SW = 60, SH = 50; // planter spot size
 const SPOTS = [[8, 64], [76, 64], [8, 120], [76, 120]];
 const FLOOR = 180;
+const CROP_COLORS = { wheat: '#e8d070', cotton: '#fff4e0', flowers: '#f08ab0', pumpkin: '#f08a2a' };
 
 export const nightsNeeded = p => Math.max(1, CROPS[p.crop].nights - (PLANTERS[p.level].faster ? 1 : 0));
 export const cropProgress = p => (p.crop ? Math.min(1, p.nights / nightsNeeded(p)) : 0);
@@ -36,6 +37,7 @@ export class Attic {
     this.round = new RainWindow(26, 26, { trees: true });
     this.drips = [];
     this.floaters = [];
+    this.parts = [];
     this.active = false;
     let down = null;
     canvas.addEventListener('pointerdown', e => (down = { x: e.clientX, y: e.clientY }));
@@ -61,11 +63,26 @@ export class Attic {
     this.wall = (this.wall + dir + WALLS.length) % WALLS.length;
     this.drips = [];
     this.floaters = [];
+    this.parts = [];
+    this.slide = dir;
+    this.slideAt = performance.now();
     this.hooks.sfx('select');
     this.hooks.onWall(this.wall);
   }
 
   spot(k) { return this.wall * SPOTS_PER_WALL + k; }
+
+  // Particles from a planter on the current wall: 'leaves', 'dirt' or 'gold'.
+  spray(i, kind, crop) {
+    const k = i - this.wall * SPOTS_PER_WALL;
+    if (k < 0 || k >= SPOTS_PER_WALL) return;
+    const [x, y] = SPOTS[k];
+    const colors = { leaves: ['#6fb04a', '#a8d870', '#3d7a34', CROP_COLORS[crop] || '#ffe27a'], dirt: ['#5a3622', '#7a4a2c', '#2e1c12'], gold: ['#ffe27a', '#fff4e0', '#f39a3a'] }[kind];
+    for (let n = 0; n < (kind === 'dirt' ? 10 : 16); n++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, v = 0.8 + Math.random() * 1.6;
+      this.parts.push({ x: x + SW / 2 + (Math.random() - 0.5) * 20, y: y + SH - 18, vx: Math.cos(a) * v, vy: Math.sin(a) * v, c: colors[n % colors.length], life: 1 });
+    }
+  }
 
   loop = () => {
     if (!this.active) { this.raf = 0; return; }
@@ -149,6 +166,7 @@ export class Attic {
     S.seeds[id]--;
     S.planters[i] = { ...S.planters[i], crop: id, nights: 0 };
     persist();
+    this.spray(i, 'dirt');
     this.hooks.sfx('plant');
     this.hooks.changed();
   }
@@ -160,6 +178,7 @@ export class Attic {
     pl.level++;
     if (pl.crop) pl.nights = Math.min(pl.nights, nightsNeeded(pl));
     persist();
+    this.spray(i, 'gold');
     this.hooks.sfx('sparkle');
     this.hooks.changed();
     toast(`Upgraded to a ${next.name}!`);
@@ -171,6 +190,7 @@ export class Attic {
     S.crops[pl.crop] += n;
     const [x, y] = SPOTS[k];
     this.floaters.push({ x: x + SW / 2, y: y + 10, crop: pl.crop, n, life: 1 });
+    this.spray(i, 'leaves', pl.crop);
     S.planters[i] = { level: pl.level, crop: null, nights: 0 };
     persist();
     this.hooks.sfx('harvest');
@@ -191,6 +211,8 @@ export class Attic {
     }
     this.drips = this.drips.filter(d => d.splash < 10);
     for (const f of this.floaters) { f.y -= 0.3; f.life -= 0.012; }
+    for (const q of this.parts) { q.x += q.vx; q.y += q.vy; q.vy += 0.09; q.life -= 0.025; }
+    this.parts = this.parts.filter(q => q.life > 0);
     this.floaters = this.floaters.filter(f => f.life > 0);
   }
 
@@ -323,6 +345,9 @@ export class Attic {
     const ctx = this.ctx;
     if (!ctx) return;
     const R = (c, x, y, w, hh) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, hh); };
+    const st = Math.min(1, (now - (this.slideAt || 0)) / 260);
+    ctx.save();
+    if (st < 1) ctx.translate(Math.round((this.slide || 0) * LW * 0.35 * (1 - st) ** 3), 0);
     const flash = this.drawWall(R, now);
     this.drawFloor(R, now);
     SPOTS.forEach(([x, y], k) => this.drawPlanter(R, x, y, S.planters[this.spot(k)], now, k));
@@ -333,6 +358,12 @@ export class Attic {
         R('#9fd3f2', d.x + 1 + d.splash / 2, d.y - 1, 1, 1);
       } else R('#9fd3f2', d.x, Math.round(d.y), 1, 2);
     }
+
+    for (const q of this.parts) {
+      ctx.globalAlpha = Math.min(1, q.life * 1.5);
+      R(q.c, Math.round(q.x), Math.round(q.y), 2, 2);
+    }
+    ctx.globalAlpha = 1;
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -347,6 +378,8 @@ export class Attic {
 
     R('rgba(12,8,28,0.22)', 0, 0, LW, LH);
     if (flash > 0) R(`rgba(200,215,255,${flash * 0.2})`, 0, 0, LW, LH);
+    ctx.restore();
+    if (st < 1) R(`rgba(12,8,28,${0.5 * (1 - st)})`, 0, 0, LW, LH);
   }
 }
 

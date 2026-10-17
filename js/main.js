@@ -15,7 +15,7 @@ import { perks, kid } from './hero.js';
 import { startBgRain } from './bgrain.js';
 import { sleep } from './pixel.js';
 import * as audio from './audio.js';
-import { $, h, icon, hydrateIcons, showModal, toast } from './ui.js';
+import { $, h, icon, hydrateIcons, showModal, toast, countTo, confetti, sparkle } from './ui.js';
 import { iconURL } from './sprites.js';
 import { VERSION } from './version.js';
 
@@ -49,6 +49,7 @@ const attic = new Attic($('#farmCanvas'), {
 });
 const board = new Board($('#boardCanvas'), {
   sfx,
+  buzz: audio.buzz,
   toast,
   onUpdate: updateMatchHud,
   onSpecial: runSpecial,
@@ -74,8 +75,8 @@ const have = k => (k in S.mats ? S.mats[k] : S.crops[k]);
 
 function updateHud() {
   $('#hud').hidden = current === 'create';
-  $('#coins').textContent = S.coins;
-  $('#shards').textContent = S.shards;
+  countTo($('#coins'), S.coins);
+  countTo($('#shards'), S.shards);
   const night = S.phase === 'night';
   $('#dayIcon').src = iconURL(night ? 'moon' : 'sun');
   $('#dayText').textContent = `Day ${S.day}`;
@@ -92,10 +93,13 @@ function updateMatchHud(b) {
   const c = b.cfg;
   $('#mLevel').textContent = `Level ${c.n}`;
   $('#mMoves').textContent = b.moves;
+  $('#mMoves').closest('.pill').classList.toggle('low', b.moves <= 5 && !b.ended);
   $('#mBlasts').textContent = `${b.blasts}/${c.blasts}`;
   $('#mBlastPill').classList.toggle('done', b.blasts >= c.blasts);
   $('#mBar').style.width = Math.min(100, (b.score / c.target) * 100) + '%';
-  $('#mScore').textContent = `${b.score} / ${c.target}`;
+  countTo($('#mScoreNum'), b.score);
+  $('#mScoreTarget').textContent = c.target;
+  $('#mBar').parentElement.classList.toggle('full', b.score >= c.target);
   $('#mDay').textContent = `Day ${S.day} · level ${S.today.played} of ${LEVELS_PER_DAY} today`;
 }
 
@@ -108,6 +112,8 @@ $('#soundBtn').addEventListener('click', () => {
 
 // Audio may only start after a user gesture.
 addEventListener('pointerdown', () => audio.initAudio(), { capture: true });
+// Every button gives a soft click.
+addEventListener('click', e => { if (e.target.closest('.btn, .seg-btn, .chip, .lvl, .contact')) sfx('tap'); }, { capture: true });
 
 // Full-screen title card between phases. Tap to skip.
 function interlude({ iconName, title, text }) {
@@ -192,6 +198,8 @@ function startLevel(n) {
   S.today.played++;
   persist();
   show('match');
+  $('#mScoreNum').dataset.v = 0;
+  $('#mScoreNum').textContent = '0';
   board.start(cfg);
   if (!S.seen.tutorial) {
     S.seen.tutorial = true;
@@ -269,6 +277,17 @@ async function runSpecial(b, kinds) {
   return res;
 }
 
+// Level-cleared fanfare: confetti, a chime per star, coins counting up.
+function celebrate(stars, coins) {
+  confetti();
+  audio.buzz([30, 40, 30]);
+  document.querySelectorAll('#modal .stars .ico').forEach((star, i) => {
+    if (i >= stars) return;
+    setTimeout(() => { sfx('place'); sparkle(star, { count: 8 }); }, 250 + i * 180);
+  });
+  setTimeout(() => { const el = document.querySelector('#modal .reward .count'); if (el) countTo(el, coins); }, 300 + stars * 180);
+}
+
 function starRow(n) {
   return h('span', { class: 'stars' }, [1, 2, 3].map(i => icon(i <= n ? 'star' : 'starOff')));
 }
@@ -295,10 +314,11 @@ function onLevelEnd(b, won) {
       cls: 'win',
       body: h('div', { class: 'center' },
         starRow(stars),
-        h('p', { class: 'reward' }, icon('coin', 'ico big'), ` +${coins}  `, icon('shard', 'ico big'), ` +${shards}`),
+        h('p', { class: 'reward' }, icon('coin', 'ico big'), ' +', h('span', { class: 'count', 'data-v': 0 }, '0'), '  ', icon('shard', 'ico big'), ` +${shards}`),
         h('p', { class: 'muted' }, dayOver ? 'That’s enough storm-fighting for one day.' : `${LEVELS_PER_DAY - S.today.played} more level${LEVELS_PER_DAY - S.today.played > 1 ? 's' : ''} before dark.`)),
       buttons: dayOver ? [home] : [{ label: 'Call it a day', onClick: nightfall }, { label: 'Next level', cls: 'primary', onClick: () => startLevel(S.maxLevel) }],
     });
+    celebrate(stars, coins);
   } else {
     const why = [];
     if (b.score < c.target) why.push(`${c.target - b.score} points short`);

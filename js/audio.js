@@ -1,6 +1,11 @@
 // Tiny WebAudio synth: rain ambience plus chiptune-ish effects. No audio files needed.
 let ac, master, enabled = true;
 
+// Short vibration on phones that allow it (Android). Follows the sound setting.
+export function buzz(pattern) {
+  if (enabled && navigator.vibrate) try { navigator.vibrate(pattern); } catch {}
+}
+
 export function setSound(on) {
   enabled = on;
   if (master) master.gain.setTargetAtTime(on ? 1 : 0, ac.currentTime, 0.05);
@@ -86,6 +91,7 @@ export function sfx(name, arg = 1) {
   switch (name) {
     case 'swap': tone(440, 0.06, { vol: 0.03, slide: 520 }); break;
     case 'nope': tone(200, 0.12, { vol: 0.05, slide: 140 }); break;
+    case 'tap': tone(880, 0.025, { vol: 0.018, type: 'triangle' }); break;
     case 'select': tone(660, 0.04, { vol: 0.025, type: 'triangle' }); break;
     case 'pop': tone(NOTES[Math.min(arg - 1, 7)], 0.09, { vol: 0.05, type: 'triangle' }); break;
     case 'land': tone(120, 0.05, { vol: 0.03, type: 'sine' }); break;

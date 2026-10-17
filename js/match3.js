@@ -1,5 +1,5 @@
 import { fitCanvas, toLogical, sleep, tween, ease } from './pixel.js';
-import { TILES, TILES_GREY, TILE_COLORS, SPECIALS } from './sprites.js';
+import { TILES, TILES_WHITE, TILES_GREY, TILE_COLORS, SPECIALS } from './sprites.js';
 
 export const COLS = 7, ROWS = 9;
 const CELL = 14, PAD = 4;
@@ -7,6 +7,8 @@ const LW = COLS * CELL + PAD * 2, LH = ROWS * CELL + PAD * 2;
 
 const inBounds = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
 const key = p => p.r * COLS + p.c;
+const cx = c => PAD + c * CELL + CELL / 2, cy = r => PAD + r * CELL + CELL / 2;
+const COMBO_WORDS = ['', '', 'Nice!', 'Lovely!', 'Magical!', 'Spellbinding!'];
 let uid = 0;
 
 // Which charged tile a match shape makes. Order matters: the first rule that fits wins.
@@ -29,6 +31,9 @@ export class Board {
     this.shake = 0;
     this.flash = 0;
     this.cover = 0;
+    this.rings = [];
+    this.twinkles = [];
+    this.banner = null;
     this.busy = true;
     this.running = false;
     canvas.addEventListener('pointerdown', e => this.onDown(e));
@@ -53,6 +58,9 @@ export class Board {
     this.particles = [];
     this.floaters = [];
     this.cover = 0;
+    this.rings = [];
+    this.twinkles = [];
+    this.banner = null;
     this.warnedNoMoves = false;
     this.fillInitial();
     this.running = true;
@@ -258,18 +266,20 @@ export class Board {
     }
 
     this.hooks.sfx('swap');
-    await this.animSwap(A, B, a, b);
     this.grid[a.r][a.c] = B;
     this.grid[b.r][b.c] = A;
     const groups = this.findGroups();
     if (!groups.length) {
-      this.hooks.sfx('nope');
-      await this.animSwap(A, B, b, a);
       this.grid[a.r][a.c] = A;
       this.grid[b.r][b.c] = B;
+      this.hooks.sfx('nope');
+      this.hooks.buzz && this.hooks.buzz(20);
+      await this.animNope(A, B, a, b);
       this.busy = false;
       return;
     }
+    this.hooks.buzz && this.hooks.buzz(8);
+    await this.animSwap(A, B, a, b);
     this.moves--;
     this.hooks.onUpdate(this);
     await this.resolve(groups, gen, [a, b]);
@@ -291,18 +301,53 @@ export class Board {
     this.lastInput = performance.now();
   }
 
-  animSwap(A, B, a, b) {
-    return tween(130, t => {
+  // Snappy swap with a little overshoot.
+  async animSwap(A, B, a, b) {
+    await tween(150, t => {
       A.x = a.c + (b.c - a.c) * t; A.y = a.r + (b.r - a.r) * t;
       B.x = b.c + (a.c - b.c) * t; B.y = b.r + (a.r - b.r) * t;
+    }, ease.outBack);
+    A.x = b.c; A.y = b.r; B.x = a.c; B.y = a.r;
+  }
+
+  // A swap that doesn't match: the tiles lean in, then wobble back home.
+  async animNope(A, B, a, b) {
+    const dr = b.r - a.r, dc = b.c - a.c;
+    await tween(300, t => {
+      const k = t < 0.35 ? ease.outQuad(t / 0.35) * 0.4 : 0.4 * Math.cos(((t - 0.35) / 0.65) * Math.PI * 2.5) * (1 - (t - 0.35) / 0.65);
+      A.x = a.c + dc * k; A.y = a.r + dr * k;
+      B.x = b.c - dc * k; B.y = b.r - dr * k;
+    });
+    A.x = a.c; A.y = a.r; B.x = b.c; B.y = b.r;
+  }
+
+  // Tiles of a big shape fly into the cell that becomes the charged tile.
+  async suck(items, to) {
+    const from = items.map(x => ({ x: x.tile.x, y: x.tile.y }));
+    await tween(220, t => {
+      items.forEach((x, i) => {
+        x.tile.x = from[i].x + (to.c - from[i].x) * t;
+        x.tile.y = from[i].y + (to.r - from[i].y) * t;
+        x.tile.s = 1 - t * 0.7;
+        x.tile.flash = t;
+      });
     }, ease.inOut);
+    for (const x of items) if (this.grid[x.p.r][x.p.c] === x.tile) this.grid[x.p.r][x.p.c] = null;
+  }
+
+  ring(p, max, color = '#ffe27a') {
+    this.rings.push({ x: cx(p.c), y: cy(p.r), r: 1, max, life: 1, color });
+  }
+
+  say(text, color = '#ffe27a') {
+    this.banner = { text, color, t0: performance.now() };
   }
 
   async resolve(groups, gen, origins = []) {
     let combo = 0;
     while (groups.length && this.running && gen === this.gen) {
       combo++;
-      const clear = [];
+      const clear = [], sucks = [];
       let pts = 0;
       for (const g of groups) {
         pts += g.cells.length * 10 * combo + Math.max(0, g.cells.length - 3) * 20;
@@ -313,15 +358,32 @@ export class Board {
           const t = this.grid[keep.r][keep.c];
           t.sp = kind;
           t.born = performance.now();
-          this.hooks.sfx('charge');
-          this.burst(keep, '#ffe27a', 10);
+          t.s = 0.2;
           this.hooks.onCreate && this.hooks.onCreate(kind);
+          sucks.push({ to: keep, items: g.cells.filter(p => key(p) !== key(keep)).map(p => ({ p, tile: this.grid[p.r][p.c] })) });
+        } else {
+          for (const p of g.cells) clear.push(p);
         }
-        for (const p of g.cells) if (!keep || key(p) !== key(keep)) clear.push(p);
       }
       this.addScore(pts, groups.flatMap(g => g.cells));
       this.hooks.sfx('pop', combo);
-      await this.pop(clear);
+      this.hooks.buzz && this.hooks.buzz(combo > 1 ? 25 : 12);
+      if (combo >= 2) {
+        this.say(COMBO_WORDS[Math.min(combo, COMBO_WORDS.length - 1)]);
+        this.ring(groups[0].cells[0], 10 + combo * 4, '#fff4e0');
+      }
+      await Promise.all([
+        this.pop(clear),
+        ...sucks.map(async s => {
+          await this.suck(s.items, s.to);
+          const t = this.grid[s.to.r][s.to.c];
+          this.hooks.sfx('charge');
+          this.ring(s.to, 16);
+          this.burst(s.to, '#ffe27a', 14);
+          await tween(220, k => (t.s = 0.2 + 0.8 * ease.outBack(k)));
+          t.s = 1;
+        }),
+      ]);
       await this.collapse();
       groups = this.findGroups();
     }
@@ -372,10 +434,14 @@ export class Board {
       const cells = this.blastCells(tiles.map(t => t.sp), at);
       this.blasts += tiles.length;
       this.hooks.sfx('boom');
-      this.shake = 10;
+      this.hooks.buzz && this.hooks.buzz([40, 30, 60]);
+      this.shake = 14;
       this.flash = 1;
+      this.ring(at, 90, '#fff8e0');
+      setTimeout(() => this.ring(at, 60, '#ffe27a'), 90);
+      this.say(tiles.length > 1 ? 'Mashup!' : 'Storm Blast!');
       tiles.forEach(t => (t.sp = null));
-      this.addScore(250 * tiles.length + cells.length * 15, [at], tiles.length > 1 ? 'MASHUP!' : 'BLAST!');
+      this.addScore(250 * tiles.length + cells.length * 15, [at], '', true);
       this.hooks.onUpdate(this);
       await this.pop([...cells, ...where], at);
     } else {
@@ -407,6 +473,7 @@ export class Board {
           this.burst(x.p, x.tile.dead ? '#6e6878' : x.tile.sp ? '#ffe27a' : TILE_COLORS[x.tile.t], center ? 9 : 5);
         }
         x.tile.s = lt < 0.3 ? 1 + lt : 1.3 * (1 - (lt - 0.3) / 0.7);
+        x.tile.flash = lt < 0.3 ? lt / 0.3 : 1 - (lt - 0.3) / 0.7;
       }
     });
     for (const x of items) if (this.grid[x.p.r][x.p.c] === x.tile) this.grid[x.p.r][x.p.c] = null;
@@ -434,10 +501,16 @@ export class Board {
     }
     if (!moving.length) return;
     const dist = Math.max(...moving.map(t => t.toY - t.fromY));
-    await tween(120 + dist * 45, k => {
-      for (const t of moving) t.y = t.fromY + (t.toY - t.fromY) * k;
-    }, ease.inQuad);
-    for (const t of moving) t.y = t.toY;
+    const fall = 120 + dist * 45, stagger = 14, total = fall + stagger * (COLS - 1);
+    await tween(total, k => {
+      const now = k * total;
+      for (const t of moving) {
+        const lt = Math.min(1, Math.max(0, (now - t.x * stagger) / fall));
+        t.y = t.fromY + (t.toY - t.fromY) * ease.inQuad(lt);
+        if (lt >= 1 && !t.landed) { t.landed = true; t.sx = 1.25; t.sy = 0.72; }
+      }
+    });
+    for (const t of moving) { t.y = t.toY; t.landed = false; }
     this.hooks.sfx('land');
   }
 
@@ -471,11 +544,11 @@ export class Board {
     return false;
   }
 
-  addScore(pts, cells, label) {
+  addScore(pts, cells, label, big = false) {
     pts = Math.round(pts * (this.cfg.scoreMult || 1));
     this.score += pts;
     const p = cells[Math.floor(cells.length / 2)];
-    this.floaters.push({ x: PAD + p.c * CELL + CELL / 2, y: PAD + p.r * CELL + 4, text: label ? `${label} +${pts}` : `+${pts}`, life: 1, big: !!label });
+    this.floaters.push({ x: PAD + p.c * CELL + CELL / 2, y: PAD + p.r * CELL + 4, text: label ? `${label} +${pts}` : `+${pts}`, life: 1, big: big || !!label });
     this.hooks.onUpdate(this);
   }
 
@@ -509,6 +582,18 @@ export class Board {
     this.floaters = this.floaters.filter(f => f.life > 0);
     this.shake *= 0.88;
     this.flash *= 0.9;
+    for (const row of this.grid) for (const t of row) {
+      if (!t) continue;
+      if (t.sx && t.sx !== 1) { t.sx += (1 - t.sx) * 0.25; t.sy += (1 - t.sy) * 0.25; if (Math.abs(1 - t.sx) < 0.01) t.sx = t.sy = 1; }
+    }
+    for (const r of this.rings) { r.r += (r.max - r.r) * 0.16 + 0.3; r.life -= 0.04; }
+    this.rings = this.rings.filter(r => r.life > 0);
+    if (!this.busy && Math.random() < 0.04) {
+      const t = this.grid[(Math.random() * ROWS) | 0][(Math.random() * COLS) | 0];
+      if (t) this.twinkles.push({ x: PAD + t.x * CELL + 2 + Math.random() * 10, y: PAD + t.y * CELL + 2 + Math.random() * 6, life: 1 });
+    }
+    for (const w of this.twinkles) w.life -= 0.04;
+    this.twinkles = this.twinkles.filter(w => w.life > 0);
     const wait = this.cfg.wand ? 2500 : 6000;
     if (!this.busy && !this.ended && !this.hint && this.moves > 0 && performance.now() - this.lastInput > wait) {
       const moves = this.findMoves();
@@ -544,6 +629,12 @@ export class Board {
       if (!t || t.s <= 0.01) continue;
       let px = Math.round(PAD + t.x * CELL + 1), py = Math.round(PAD + t.y * CELL + 1);
       if (hintIds.includes(t.id)) py += Math.round(Math.sin(now / 110));
+      const selected = this.sel && this.sel.r === r && this.sel.c === c && !this.busy;
+      if (selected) {
+        ctx.fillStyle = 'rgba(10,6,14,0.35)';
+        ctx.fillRect(px + 2, py + 11, 9, 2);
+        py -= 2 + Math.round(Math.abs(Math.sin(now / 160)));
+      }
       if (t.sp && !t.dead) {
         // charged tiles glow so they read as tappable
         ctx.fillStyle = `rgba(255,226,122,${0.18 + slow * 0.3})`;
@@ -557,10 +648,14 @@ export class Board {
       }
       const img = t.sp ? SPECIALS[t.sp] : t.dead ? TILES_GREY[t.t] : TILES[t.t];
       if (t.dead) ctx.globalAlpha = 0.5;
-      if (t.s !== 1) {
-        const w = 12 * t.s;
-        ctx.drawImage(img, px + 6 - w / 2, py + 6 - w / 2, w, w);
-      } else ctx.drawImage(img, px, py);
+      const sw = 12 * t.s * (t.sx || 1), sh = 12 * t.s * (t.sy || 1);
+      const dx = px + 6 - sw / 2, dy = (t.sy || 1) < 1 ? py + 12 - sh : py + 6 - sh / 2;
+      if (sw !== 12 || sh !== 12) ctx.drawImage(img, dx, dy, sw, sh);
+      else ctx.drawImage(img, px, py);
+      if (t.flash > 0.02 && !t.sp && !t.dead) {
+        ctx.globalAlpha = Math.min(1, t.flash);
+        ctx.drawImage(TILES_WHITE[t.t], dx, dy, sw, sh);
+      }
       ctx.globalAlpha = 1;
       if (t.sp && !t.dead) {
         const k = Math.floor(now / 140 + t.id) % 24;
@@ -582,6 +677,18 @@ export class Board {
       ctx.fillRect(x, y, 1, CELL); ctx.fillRect(x + CELL - 1, y, 1, CELL);
     }
 
+    for (const w of this.twinkles) {
+      ctx.globalAlpha = Math.sin(w.life * Math.PI);
+      ctx.fillStyle = '#fff8e0';
+      const x = Math.round(w.x), y = Math.round(w.y);
+      ctx.fillRect(x, y - 1, 1, 3); ctx.fillRect(x - 1, y, 3, 1);
+    }
+    for (const ring of this.rings) {
+      ctx.globalAlpha = Math.max(0, ring.life);
+      ctx.strokeStyle = ring.color;
+      ctx.lineWidth = 1 + ring.life * 2;
+      ctx.beginPath(); ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2); ctx.stroke();
+    }
     for (const p of this.particles) {
       ctx.globalAlpha = Math.min(1, p.life * 1.5);
       ctx.fillStyle = p.c;
@@ -593,12 +700,28 @@ export class Board {
     ctx.textBaseline = 'middle';
     for (const f of this.floaters) {
       ctx.globalAlpha = Math.min(1, f.life * 2);
-      ctx.font = `${f.big ? 11 : 9}px "Jersey 10", monospace`;
+      const pop = 1 + Math.max(0, f.life - 0.85) * 4; // starts big, settles
+      ctx.font = `${Math.round((f.big ? 11 : 9) * pop)}px "Jersey 10", monospace`;
       const x = Math.min(LW - 24, Math.max(24, f.x)), y = Math.max(10, Math.round(f.y));
       ctx.fillStyle = '#1a1220'; ctx.fillText(f.text, x + 1, y + 1);
       ctx.fillStyle = f.big ? '#ffe27a' : '#fff4e0'; ctx.fillText(f.text, x, y);
     }
     ctx.globalAlpha = 1;
+
+    if (this.banner) {
+      const age = now - this.banner.t0;
+      if (age > 1100) this.banner = null;
+      else {
+        const s = age < 260 ? ease.outBack(age / 260) : 1;
+        ctx.globalAlpha = age > 800 ? 1 - (age - 800) / 300 : 1;
+        ctx.font = `${Math.max(1, Math.round(18 * s))}px "Jersey 10", monospace`;
+        const y = Math.round(LH * 0.42 - (age > 800 ? (age - 800) / 30 : 0));
+        ctx.fillStyle = '#1a1220';
+        for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 2], [1, 2]]) ctx.fillText(this.banner.text, LW / 2 + ox, y + oy);
+        ctx.fillStyle = this.banner.color; ctx.fillText(this.banner.text, LW / 2, y);
+        ctx.globalAlpha = 1;
+      }
+    }
 
     if (this.cover > 0.001) {
       const B = 6, cols = Math.ceil(LW / B), rows = Math.ceil(LH / B);

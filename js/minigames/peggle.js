@@ -78,7 +78,9 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
 
   let aim = Math.PI / 2, ball = null, frame = 0, hits = 0, done = false, ctx;
   let shotFrames = 0, slowFrames = 0;
-  const pops = [];
+  const pops = [], rings = [], trail = [];
+  let callout = null, bucketFlash = 0;
+  const STREAK = { 5: 'Nice!', 10: 'Lovely!', 15: 'Magical!', 20: 'Spellbinding!' };
   const orangeLeft = () => pegs.filter(p => p.kind === 'orange' && !p.gone && !p.lit).length;
 
   function updateInfo() {
@@ -158,7 +160,12 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
           b.x = p.x + nx * HIT; b.y = p.y + ny * HIT;
           const dot = b.vx * nx + b.vy * ny;
           if (dot < 0) { b.vx -= (1 + BOUNCE) * dot * nx; b.vy -= (1 + BOUNCE) * dot * ny; }
-          if (!p.lit && touch(p)) { p.lit = true; updateInfo(); }
+          if (!p.lit && touch(p)) {
+            p.lit = true;
+            rings.push({ x: p.x, y: p.y, t: 0, gold: p.kind !== 'blue' });
+            if (STREAK[hits]) callout = { text: STREAK[hits], t: 0 };
+            updateInfo();
+          }
         }
       }
       return null;
@@ -178,7 +185,7 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
     async function endShot(caught) {
       ball = null;
       clearLit();
-      if (caught) { balls++; sfx('coin'); ui.status('Caught in the bucket: free ball!'); }
+      if (caught) { balls++; bucketFlash = 1; callout = { text: 'Free ball!', t: 0 }; sfx('coin'); ui.status('Caught in the bucket: free ball!'); }
       else if (mode !== 'word' || !hits) ui.status(hits ? `${hits} peg${hits > 1 ? 's' : ''} that shot.` : 'Missed everything!');
       updateInfo();
       if (won()) return finish('win', { pegs: 'Every orange peg is gone!', word: `You spelled ${word?.word}!`, cats: 'All the cats are safe!', ttt: 'Three in a row!' }[mode]);
@@ -210,7 +217,12 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
     function update() {
       frame++;
       for (const p of pops) p.t++;
-      if (!ball) return;
+      for (const r of rings) r.t++;
+      if (callout) callout.t++;
+      bucketFlash *= 0.92;
+      if (!ball) { trail.length = 0; return; }
+      trail.push({ x: ball.x, y: ball.y });
+      if (trail.length > 10) trail.shift();
       stepBall(ball, true);
       shotFrames++;
       slowFrames = Math.hypot(ball.vx, ball.vy) < 0.25 ? slowFrames + 1 : 0;
@@ -289,7 +301,34 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
       ctx.fillStyle = '#a0663a'; ctx.fillRect(bx - BUCKET_W / 2, BUCKET_Y, BUCKET_W, 1);
       ctx.fillStyle = '#3a2216'; ctx.fillRect(bx - BUCKET_W / 2 + 4, BUCKET_Y + 2, 1, 4); ctx.fillRect(bx + BUCKET_W / 2 - 5, BUCKET_Y + 2, 1, 4);
 
+      trail.forEach((t, k) => {
+        ctx.globalAlpha = (k / trail.length) * 0.6;
+        ctx.fillStyle = k > trail.length - 4 ? '#fff8e0' : '#9fd3f2';
+        ctx.fillRect(Math.round(t.x - 1), Math.round(t.y - 1), 2, 2);
+      });
+      ctx.globalAlpha = 1;
+      for (const r of rings) {
+        if (r.t > 16) continue;
+        ctx.globalAlpha = 1 - r.t / 16;
+        ctx.strokeStyle = r.gold ? '#ffe27a' : '#bfe6ff';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(r.x, r.y, 3 + r.t * 0.7, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
       if (ball) ctx.drawImage(BALL, Math.round(ball.x - 2), Math.round(ball.y - 2));
+      if (bucketFlash > 0.05) {
+        ctx.fillStyle = `rgba(255,226,122,${bucketFlash * 0.6})`;
+        ctx.fillRect(Math.round(bucketX()) - BUCKET_W / 2 - 2, BUCKET_Y - 6, BUCKET_W + 4, 12);
+      }
+      if (callout && callout.t < 60) {
+        const s = Math.min(1, callout.t / 8);
+        ctx.globalAlpha = callout.t > 45 ? 1 - (callout.t - 45) / 15 : 1;
+        ctx.font = `${Math.max(1, Math.round(14 * (0.6 + 0.4 * s)))}px "Jersey 10", monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#1a1220'; ctx.fillText(callout.text, LW / 2 + 1, 31);
+        ctx.fillStyle = '#ffe27a'; ctx.fillText(callout.text, LW / 2, 30);
+        ctx.globalAlpha = 1;
+      }
     }
 
     function loop() {

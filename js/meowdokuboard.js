@@ -1,4 +1,4 @@
-import { h } from './ui.js';
+import { h, sparkle } from './ui.js';
 import { logicSolve } from './meowdoku-engine.js';
 
 // Soft region colours, one per region (up to 10).
@@ -111,6 +111,7 @@ export function meowdokuBoard(host, { puzzle, piece, lives = 3, sfx, onChange, o
     cat[i] = true;
     mark[i] = false;
     sfx('place');
+    sparkle(cells[i], { count: 7 });
     cells[i].classList.add('pop');
     setTimeout(() => cells[i].classList.remove('pop'), 250);
     // N pieces with no clashes is the (unique) solution.

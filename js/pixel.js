@@ -47,4 +47,5 @@ export const ease = {
   inOut: t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2),
   inQuad: t => t * t,
   outBack: t => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2,
+  outQuad: t => 1 - (1 - t) * (1 - t),
 };

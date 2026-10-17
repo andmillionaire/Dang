@@ -194,10 +194,10 @@ main { flex: 1; min-height: 0; position: relative; }
 
 /* ---------- toast ---------- */
 #toast {
-  position: fixed; left: 50%; top: calc(var(--safe-t) + 48px); z-index: 30;
-  transform: translate(-50%, -12px); opacity: 0; pointer-events: none;
+  position: fixed; left: 50%; bottom: calc(var(--safe-b) + 14px); z-index: 30;
+  transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
   background: var(--ink); color: var(--cream); padding: 8px 12px; font-size: 19px;
-  max-width: min(90vw, 420px); text-align: center;
+  max-width: min(92vw, 420px); text-align: center; font-size: 17px !important;
   transition: opacity .2s, transform .2s;
   box-shadow: 0 0 0 var(--px) var(--wood-l);
 }
@@ -525,3 +525,68 @@ html, button, input, .sd-cell, .cw-cell, .ttt-cell { touch-action: manipulation;
 .pantry-tabs .seg-btn { flex: 1; }
 .owned-count { color: var(--gold); font-weight: 400; }
 #pantryBtn .ico { width: 18px; height: 18px; }
+
+/* ---------- juice ---------- */
+/* buttons squish when pressed and lift a touch on hover */
+.btn, .seg-btn, .chip, .lvl, .contact, .arrow, .kb-key, .sd-sym, .ttt-cell {
+  transition: transform .08s ease-out, filter .1s, background-color .12s;
+}
+.btn:active:not(:disabled), .seg-btn:active, .chip:active, .lvl:active:not(:disabled), .contact:active, .arrow:active, .sd-sym:active:not(:disabled) {
+  transform: scale(.94);
+}
+@media (hover: hover) { .btn:hover:not(:disabled) { transform: translateY(-1px); } }
+
+/* screens slide up as they arrive */
+.screen.active { animation: screenIn .32s cubic-bezier(.2, .9, .3, 1.2); }
+@keyframes screenIn { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+
+/* counters bump when they change */
+.bump { animation: bump .35s cubic-bezier(.3, 1.8, .5, 1); }
+@keyframes bump { 40% { transform: scale(1.25); } }
+
+/* nearly out of moves */
+.pill.low { background: #7a2424; animation: lowpulse .9s ease-in-out infinite; }
+.pill.low b { color: #fff4e0; }
+@keyframes lowpulse { 50% { transform: scale(1.08); background: #a33a34; } }
+
+/* the score bar shimmers once the target is reached */
+#mBar { transition: width .4s cubic-bezier(.2, .9, .3, 1.1); }
+.bar.full #mBar { background: linear-gradient(90deg, #8fd06a, #f8f0a0, #8fd06a); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* sparkles and confetti */
+.spark {
+  position: fixed; width: 4px; height: 4px; z-index: 60; pointer-events: none;
+  animation: spark .6s cubic-bezier(.1, .8, .3, 1) forwards;
+}
+@keyframes spark {
+  from { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+  to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.4); opacity: 0; }
+}
+.confetti {
+  position: fixed; top: -10px; width: 6px; height: 8px; z-index: 60; pointer-events: none;
+  animation: fall linear forwards;
+}
+@keyframes fall { to { transform: translate(var(--drift), 105vh) rotate(var(--spin)); } }
+
+/* toasts drop in with a bounce */
+#toast { transition: opacity .2s, transform .35s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* win modal stars spin in */
+.win .stars .ico { animation: starIn .5s cubic-bezier(.3, 1.7, .5, 1) backwards; }
+@keyframes starIn { from { transform: scale(0) rotate(-180deg); opacity: 0; } }
+.win .stars .ico:nth-child(2) { animation-delay: .18s; }
+.win .stars .ico:nth-child(3) { animation-delay: .36s; }
+
+/* mini-game banner + placements */
+.mg-banner { animation: bannerIn .45s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes bannerIn { from { transform: translate(-50%, -50%) scale(.3) rotate(-6deg); opacity: 0; } }
+.md-cell.pop .ico, .sd-cell.pop .ico, .ttt-cell .mark { animation: placeIn .3s cubic-bezier(.3, 1.8, .5, 1); }
+@keyframes placeIn { from { transform: scale(0) translateY(-6px); } 60% { transform: scale(1.25); } }
+
+/* interlude moon rises */
+.interlude .ico.huge { animation: rise 1.2s cubic-bezier(.2, .8, .3, 1); }
+@keyframes rise { from { transform: translateY(40px); opacity: 0; } }
+.interlude h2 { animation: fade .8s .2s backwards; }
+.interlude p { animation: fade .8s .5s backwards; }
+#mScore { display: flex; align-items: center; justify-content: center; gap: .3em; }

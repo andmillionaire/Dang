@@ -1,4 +1,4 @@
-import { h } from './ui.js';
+import { h, sparkle } from './ui.js';
 import { SHAPES } from './sudoku.js';
 
 // Interactive sudoku grid. Tap a square then a symbol, or arm a symbol then tap squares.
@@ -44,6 +44,7 @@ export function sudokuBoard(host, { N, puzzle, solution, symbol, names, lives = 
     if (solution[i] === v) {
       grid[i] = v;
       sfx(placeSfx);
+      sparkle(cells[i], { count: 6 });
       cells[i].classList.add('pop');
       if (!grid.includes(0)) return finish('win');
       render();

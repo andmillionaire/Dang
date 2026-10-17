@@ -1,4 +1,4 @@
-import { h, icon } from '../ui.js';
+import { h, icon, sparkle, confetti } from '../ui.js';
 import { sleep } from '../pixel.js';
 
 // Shared chrome for every mini-game: title, one-line how-to, info bar, play area, status line.
@@ -15,8 +15,10 @@ export function mount(root, { title, tip }) {
 
 export async function banner(ui, res, msg) {
   const win = res === 'win';
-  ui.wrap.append(h('div', { class: 'mg-banner ' + (win ? 'win' : 'lose') },
-    h('b', {}, win ? 'Blast unlocked!' : 'Fizzle…'), h('span', {}, msg)));
+  const b = h('div', { class: 'mg-banner ' + (win ? 'win' : 'lose') },
+    h('b', {}, win ? 'Blast unlocked!' : 'Fizzle…'), h('span', {}, msg));
+  ui.wrap.append(b);
+  if (win) { requestAnimationFrame(() => sparkle(b, { count: 18 })); confetti(30); }
   await sleep(1600);
 }
 

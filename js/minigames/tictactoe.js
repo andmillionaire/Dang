@@ -1,4 +1,4 @@
-import { h, icon } from '../ui.js';
+import { h, icon, sparkle } from '../ui.js';
 import { sleep } from '../pixel.js';
 import { mount, banner } from './common.js';
 
@@ -101,6 +101,7 @@ export function play(root, { difficulty, sfx, boost }) {
       if (locked || board[i]) return;
       board[i] = 'X';
       sfx('place');
+      sparkle(cells[i], { count: 6 });
       locked = true;
       render();
       if (await check()) return;
