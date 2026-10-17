@@ -1,24 +1,60 @@
+// Who you phone at night for deliveries. Change it here to rename the contact everywhere.
+export const DELIVERY_CONTACT = 'Jeff Bezos';
+
+export const LEVELS_PER_DAY = 3;
+
+// Crops grow one step per night you sleep.
 export const CROPS = {
-  wheat:   { name: 'Wheat',   cost: 5,  time: 30,  yield: 3 },
-  cotton:  { name: 'Cotton',  cost: 10, time: 60,  yield: 3 },
-  flowers: { name: 'Flowers', cost: 15, time: 120, yield: 3 },
-  pumpkin: { name: 'Pumpkin', cost: 25, time: 180, yield: 2 },
+  wheat:   { name: 'Wheat',   nights: 1, yield: 3 },
+  cotton:  { name: 'Cotton',  nights: 1, yield: 3 },
+  flowers: { name: 'Flowers', nights: 2, yield: 3 },
+  pumpkin: { name: 'Pumpkin', nights: 3, yield: 2 },
 };
 
-export const PLOT_COSTS = [0, 40, 75, 120, 180, 250];
+export const MATERIALS = { lumber: 'Lumber', fabric: 'Fabric' };
+
+// Planter kit price by how many planters you'll have once it's built (first planter is free).
+export const KIT_COSTS = [0, 30, 60, 90, 130, 180];
+
+// What the night-time delivery service sells.
+export const CATALOG = [
+  { id: 'seed:wheat',   name: 'Wheat seeds',   icon: 'wheat',   price: 4,  note: 'Ready after 1 night' },
+  { id: 'seed:cotton',  name: 'Cotton seeds',  icon: 'cotton',  price: 8,  note: 'Ready after 1 night' },
+  { id: 'seed:flowers', name: 'Flower seeds',  icon: 'flowers', price: 12, note: 'Ready after 2 nights' },
+  { id: 'seed:pumpkin', name: 'Pumpkin seeds', icon: 'pumpkin', price: 18, note: 'Ready after 3 nights' },
+  { id: 'lumber',       name: 'Lumber',        icon: 'lumber',  price: 10, note: 'For furniture and frames' },
+  { id: 'fabric',       name: 'Fabric',        icon: 'fabric',  price: 12, note: 'For anything soft' },
+  { id: 'kit',          name: 'Planter kit',   icon: 'kit',     price: null, note: 'Build another attic planter' },
+];
 
 export const DECOR = [
-  { id: 'curtains', name: 'Velvet Curtains', coins: 20, need: { cotton: 3 }, desc: 'Keeps the draft out.' },
-  { id: 'vase',     name: 'Flower Vase',     coins: 15, need: { flowers: 2 }, desc: 'A little spring on the sill.' },
-  { id: 'rug',      name: 'Braided Rug',     coins: 30, need: { cotton: 4, wheat: 2 }, desc: 'Warm toes, happy heart.' },
-  { id: 'painting', name: 'Sunny Painting',  coins: 35, need: { flowers: 3 }, desc: 'Proof the sun exists.' },
-  { id: 'shelf',    name: 'Book Nook',       coins: 40, need: { wheat: 5 }, desc: 'Paper-bound rainy day plans.' },
-  { id: 'quilt',    name: 'Patchwork Quilt', coins: 45, need: { cotton: 6 }, desc: 'Drape it over the armchair.' },
-  { id: 'lantern',  name: 'Pumpkin Lantern', coins: 35, need: { pumpkin: 2 }, desc: 'A grin that glows.' },
-  { id: 'fern',     name: 'Potted Fern',     coins: 30, need: { flowers: 2, wheat: 3 }, desc: 'Loves the humidity.' },
-  { id: 'lights',   name: 'String Lights',   coins: 60, need: { pumpkin: 2, flowers: 3 }, desc: 'Twinkle along the beam.' },
-  { id: 'catbed',   name: 'Cat Bed',         coins: 80, need: { cotton: 5, wheat: 4 }, desc: 'Build it and a cat will come.' },
+  { id: 'curtains', name: 'Velvet Curtains', need: { fabric: 2, cotton: 2 }, desc: 'Keeps the draft out.' },
+  { id: 'vase',     name: 'Flower Vase',     need: { lumber: 1, flowers: 3 }, desc: 'A little spring on the sill.' },
+  { id: 'rug',      name: 'Braided Rug',     need: { fabric: 2, cotton: 3 }, desc: 'Warm toes, happy heart.' },
+  { id: 'painting', name: 'Sunny Painting',  need: { lumber: 2, flowers: 2 }, desc: 'Proof the sun exists.' },
+  { id: 'shelf',    name: 'Book Nook',       need: { lumber: 4, wheat: 3 }, desc: 'Paper-bound rainy day plans.' },
+  { id: 'quilt',    name: 'Patchwork Quilt', need: { fabric: 3, cotton: 4 }, desc: 'Drape it over the armchair.' },
+  { id: 'lantern',  name: 'Pumpkin Lantern', need: { pumpkin: 2 }, desc: 'A grin that glows.' },
+  { id: 'fern',     name: 'Potted Fern',     need: { lumber: 1, flowers: 2, wheat: 2 }, desc: 'Loves the humidity.' },
+  { id: 'lights',   name: 'String Lights',   need: { lumber: 1, fabric: 1, pumpkin: 1, flowers: 2 }, desc: 'Twinkle along the beam.' },
+  { id: 'catbed',   name: 'Cat Bed',         need: { lumber: 3, fabric: 2, cotton: 3, wheat: 2 }, desc: 'Build it and a cat will come.' },
 ];
+
+// Magical-girl wardrobe. Bought with star shards; legendary pieces also need a milestone.
+export const SLOTS = { head: 'Head', outfit: 'Outfit', held: 'In hand', brooch: 'Brooch' };
+export const WARDROBE = [
+  { id: 'casual',    slot: 'outfit', name: 'Cozy Sweater',            rarity: 'common',    cost: 0,  perk: 'Comfy. No powers.' },
+  { id: 'bow',       slot: 'head',   name: 'Ribbon Bow',              rarity: 'common',    cost: 2,  perk: '+5 coins for every level won' },
+  { id: 'sailor',    slot: 'outfit', name: 'Magical Uniform',         rarity: 'rare',      cost: 5,  perk: '+2 moves every level' },
+  { id: 'tiara',     slot: 'head',   name: 'Crescent Tiara',          rarity: 'rare',      cost: 6,  perk: '+10% points' },
+  { id: 'heart',     slot: 'brooch', name: 'Heart Brooch',            rarity: 'rare',      cost: 6,  perk: 'Mini-games are a little easier' },
+  { id: 'wand',      slot: 'held',   name: 'Star Wand',               rarity: 'rare',      cost: 8,  perk: 'Hints find your biggest match, sooner' },
+  { id: 'ringtiara', slot: 'head',   name: 'Saturn Ring Tiara',       rarity: 'legendary', cost: 12, unlock: { miniWins: 10 },  perk: 'Storm Blasts hit a 7×7 area' },
+  { id: 'violet',    slot: 'outfit', name: 'Saturn Guardian Uniform', rarity: 'legendary', cost: 15, unlock: { day: 7 },        perk: '+3 moves, and tic-tac-toe ties count as wins' },
+  { id: 'crystal',   slot: 'brooch', name: 'Saturn Crystal',          rarity: 'legendary', cost: 15, unlock: { threeStars: 5 }, perk: 'Lose a mini-game? Retry it, once per level' },
+  { id: 'glaive',    slot: 'held',   name: 'Saturn Glaive',           rarity: 'legendary', cost: 20, unlock: { blasts: 20 },    perk: 'Once per level, a big match detonates instantly' },
+];
+export const SATURN_SET = ['ringtiara', 'violet', 'crystal', 'glaive'];
 
 export function levelConfig(n) {
   return {
@@ -27,7 +63,7 @@ export function levelConfig(n) {
     moves: Math.min(30, 20 + Math.floor(n / 3)),
     target: 1000 + (n - 1) * 250,
     blasts: n <= 3 ? 1 : n <= 8 ? 2 : 3,
-    // Chance the storm plays a perfect tic-tac-toe move.
-    aiSkill: Math.min(0.85, 0.35 + n * 0.05),
+    // 0..1, how hard the big-match mini-games are.
+    difficulty: Math.min(1, (n - 1) / 12),
   };
 }

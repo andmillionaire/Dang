@@ -14,6 +14,8 @@ export const PAL = {
   f: '#f08ab0', F: '#c0507a',
   q: '#f08a2a', Q: '#b85a18',
   h: '#e8d070', H: '#b89a40',
+  // heroine
+  1: '#f7d4b8', 2: '#d98a8a', 3: '#6b3a2e', 4: '#9a5640', 5: '#4a2a6a',
 };
 
 // Match tiles, 12x12. Order matters: index = tile type.
@@ -293,6 +295,86 @@ export const ICON_ROWS = {
     '.UUUUUU.',
     '..UUUU..',
   ],
+  lumber: [
+    '........',
+    'kkkkkkk.',
+    'kbbbbbBk',
+    'kkkkkkkk',
+    'ktttttTk',
+    'kkkkkkkk',
+    'kbbbbbBk',
+    'kkkkkkk.',
+  ],
+  fabric: [
+    '........',
+    'kkkkkkk.',
+    'kpppppPk',
+    'kpPPPPPk',
+    'kkkkkkkk',
+    'kfffffFk',
+    'kfFFFFFk',
+    'kkkkkkk.',
+  ],
+  kit: [
+    '...l.l..',
+    '....G...',
+    'kkkkkkkk',
+    'kbbbbbbk',
+    'kBBBBBBk',
+    'kbbbbbbk',
+    'kBBBBBBk',
+    'kkkkkkkk',
+  ],
+  shard: [
+    '...kk...',
+    '..kfpk..',
+    '.kfwppk.',
+    'kfwpppPk',
+    '.kfppPk.',
+    '..kpPk..',
+    '...kk...',
+    '........',
+  ],
+  sun: [
+    '...yy...',
+    '.y.yy.y.',
+    '..yyyy..',
+    'yyyooyyy',
+    'yyyooyyy',
+    '..yyyy..',
+    '.y.yy.y.',
+    '...yy...',
+  ],
+  moon: [
+    '..yyy...',
+    '.yy.....',
+    'yy......',
+    'yy......',
+    'yy......',
+    'yy....y.',
+    '.yy..yy.',
+    '..yyyy..',
+  ],
+  phone: [
+    '.kkkkk..',
+    '.kfffk..',
+    '.kuuuk..',
+    '.kuuuk..',
+    '.kfffk..',
+    '.kfwfk..',
+    '.kfffk..',
+    '.kkkkk..',
+  ],
+  heart: [
+    '........',
+    '.rr.rr..',
+    'rwrrrrr.',
+    'rrrrrrr.',
+    '.rrrrr..',
+    '..rrr...',
+    '...r....',
+    '........',
+  ],
   lock: [
     '..ssss..',
     '.s....s.',
@@ -304,3 +386,81 @@ export const ICON_ROWS = {
     'nnnnnnnn',
   ],
 };
+
+// ---------- heroine ----------
+// 16x27 chibi magical girl. Outfit placeholders: 7 top, 8 collar, 9 bow, 0 skirt, 6 legs, z boots.
+export const HEROINE_ROWS = [
+  '.....kkkkkk.....',
+  '...kk334433kk...',
+  '..k3334444333k..',
+  '.k333333333333k.',
+  '.k331131131133k.',
+  '.k311111111113k.',
+  'k33155111155133k',
+  'k3315w1111w5133k',
+  'k33f11111111f33k',
+  '.k311112211113k.',
+  '.k331111111133k.',
+  '..k3k111111k3k..',
+  '.k3k87711778k3k.',
+  '.k3k88799788k3k.',
+  '.k3k77799777k3k.',
+  '.k3k77777777k3k.',
+  '.k317777777713k.',
+  '..kk00000000kk..',
+  '..k0000000000k..',
+  '.k000000000000k.',
+  '.kkkkkkkkkkkkkk.',
+  '....k66kk66k....',
+  '....k66kk66k....',
+  '....k66kk66k....',
+  '....kzzkkzzk....',
+  '...kzzzkkzzzk...',
+  '...kkkk..kkkk...',
+];
+export const HEROINE_CLOSED = { 6: 'k33111111111133k', 7: 'k331kk1111kk133k' };
+
+export const OUTFIT_PAL = {
+  pajamas: { 7: '#9fd3f2', 8: '#cfe8f8', 9: '#fff4e0', 0: '#9fd3f2', 6: '#9fd3f2', z: '#f08ab0' },
+  casual:  { 7: '#efdcb4', 8: '#c9ad7f', 9: '#d0463c', 0: '#4f8fd0', 6: '#f7d4b8', z: '#6b3d22' },
+  sailor:  { 7: '#fff4e0', 8: '#4f8fd0', 9: '#d0463c', 0: '#4f8fd0', 6: '#f7d4b8', z: '#d0463c' },
+  violet:  { 7: '#efe6f6', 8: '#4a2468', 9: '#a46ad0', 0: '#4a2468', 6: '#2e1a40', z: '#4a2468' },
+};
+
+// Accessories, drawn at an offset from the heroine's top-left.
+export const ACCESSORY = {
+  bow:       { x: 10, y: -1, rows: ['ff.ff', 'fFFFf', 'ff.ff'] },
+  tiara:     { x: 4,  y: 3,  rows: ['...yy...', 'nnnnnnnn'] },
+  ringtiara: { x: 3,  y: 2,  rows: ['....PP....', 'ssPPppPPss', '....PP....'] },
+  wand:      { x: 13, y: 8,  rows: ['.y.', 'yyy', '.y.', '.f.', '.f.', '.w.', '.w.', '.w.', '.w.', '.w.'] },
+  heart:     { x: 6,  y: 12, rows: ['f..f', 'ffff', '.ff.'] },
+  crystal:   { x: 6,  y: 12, rows: ['.pp.', 'pwpP', '.PP.'] },
+  glaive:    { x: 0,  y: -8, rows: [
+    '..ss.', '.sws.', 'sws..', 'sws..', 'sws..', '.sws.', '..sP.', '.yPy.',
+    ...Array.from({ length: 26 }, (_, i) => (i % 6 === 3 ? '..p..' : '..P..')),
+  ] },
+};
+
+// ---------- mewdoku cats (8x8, recoloured per breed) ----------
+export const CAT_ROWS = [
+  '.k....k.',
+  'kAk..kAk',
+  'kEAAAAEk',
+  'kAAMMAAk',
+  'kAYAAYAk',
+  'kAAffAAk',
+  '.kAAAAk.',
+  '..kkkk..',
+];
+export const CAT_BREEDS = [
+  { name: 'Ginger',  A: '#f39a3a', E: '#f08ab0', Y: '#3d7a34', M: '#b85a18', k: '#1a1220' },
+  { name: 'Smoke',   A: '#8a8a9a', E: '#f08ab0', Y: '#ffe27a', M: '#5a5a6a', k: '#1a1220' },
+  { name: 'Midnight',A: '#2a2430', E: '#a46ad0', Y: '#ffe27a', M: '#2a2430', k: '#000000' },
+  { name: 'Snow',    A: '#fff4e0', E: '#f08ab0', Y: '#4f8fd0', M: '#fff4e0', k: '#1a1220' },
+  { name: 'Calico',  A: '#fff4e0', E: '#f08ab0', Y: '#3d7a34', M: '#f39a3a', k: '#1a1220' },
+  { name: 'Siamese', A: '#efdcb4', E: '#6b3d22', Y: '#4f8fd0', M: '#6b3d22', k: '#1a1220' },
+];
+
+// ---------- star pegs ----------
+export const PEG_ROWS = ['.xxx.', 'xxwxx', 'xxxxx', 'xxxxx', '.xxx.'];
+export const BALL_ROWS = ['.ww.', 'wwww', 'wwws', '.ss.'];
