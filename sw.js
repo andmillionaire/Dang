@@ -1,5 +1,5 @@
 // Offline-first service worker. Bump VERSION whenever app files change.
-const VERSION = 'dang-v3';
+const VERSION = 'dang-v4';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/arcade/arcade.js',

@@ -50,14 +50,27 @@ function drawDoorScene(ctx, now, st, rain) {
     rain.draw(ctx, DOOR.x, DOOR.y, now);
     R('#7a4a2c', DOOR.x - 6, DOOR.y + 2, 5, DOOR.h - 2); R('#5a3622', DOOR.x - 2, DOOR.y + 2, 1, DOOR.h - 2);
     R('rgba(140,170,230,0.12)', DOOR.x - 4, 60, DOOR.w + 12, 12);
-    if (st.pet) {
-      const img = st.pet === 'dog' ? PETS.dogSit : PETS.catSit;
-      const wag = st.pet === 'dog' && Math.floor(now / 160) % 2 ? 1 : 0;
-      ctx.drawImage(img, DOOR.x + 6 + wag, DOOR.y + DOOR.h - 16 + 1);
-      if (now < st.dripUntil) {
-        R('#9fd3f2', DOOR.x + 8 + ((now / 40) % 12 | 0), DOOR.y + DOOR.h - 6 + ((now / 25) % 6 | 0), 1, 1);
-        R('#9fd3f2', DOOR.x + 18 - ((now / 55) % 10 | 0), DOOR.y + DOOR.h - 10 + ((now / 30) % 9 | 0), 1, 1);
-      }
+    // Both visitors huddle in the doorway until you choose; the other one heads home.
+    const spot = { dog: DOOR.x - 1, cat: DOOR.x + 13 };
+    const draw = (kind, x, alpha = 1) => {
+      const img = kind === 'dog' ? PETS.dogSit : PETS.catSit;
+      const wag = kind === 'dog' && Math.floor(now / 160) % 2 ? 1 : 0;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(img, Math.round(x) + wag, DOOR.y + DOOR.h - 15);
+      ctx.globalAlpha = 1;
+    };
+    ctx.save();
+    ctx.beginPath(); ctx.rect(DOOR.x - 2, DOOR.y, DOOR.w + 4, DOOR.h); ctx.clip();
+    if (st.leaving) {
+      const t = Math.min(1, (now - st.leaveAt) / 1600);
+      draw(st.leaving, spot[st.leaving] + t * 30, 1 - t);
+    }
+    if (st.pet === 'both') { draw('dog', spot.dog); draw('cat', spot.cat); }
+    else if (st.pet) draw(st.pet, DOOR.x + 6);
+    ctx.restore();
+    if (st.pet && now < st.dripUntil) {
+      R('#9fd3f2', DOOR.x + 6 + ((now / 40) % 16 | 0), DOOR.y + DOOR.h - 6 + ((now / 25) % 6 | 0), 1, 1);
+      R('#9fd3f2', DOOR.x + 22 - ((now / 55) % 14 | 0), DOOR.y + DOOR.h - 10 + ((now / 30) % 9 | 0), 1, 1);
     }
   }
 
@@ -69,15 +82,13 @@ function drawDoorScene(ctx, now, st, rain) {
 
 const NAMES = { dog: ['Biscuit', 'Sunny', 'Maple', 'Honey', 'Waffles'], cat: ['Luna', 'Pepper', 'Mochi', 'Midnight', 'Inkwell'] };
 
-// Night 2: something scratches at the door.
+// Night 2: something scratches at the door. Two somethings, actually, and you choose who stays.
 export async function petArrives({ sfx }) {
-  const kind = Math.random() < 0.5 ? 'dog' : 'cat';
   const me = S.hero.name;
-  const st = { open: false, pet: null, scratchUntil: 0, dripUntil: 0 };
+  const st = { open: false, pet: null, leaving: null, leaveAt: 0, scratchUntil: 0, dripUntil: 0 };
   const rain = new RainWindow(DOOR.w, DOOR.h);
   const v = openVN({ drawScene: (ctx, now) => drawDoorScene(ctx, now, st, rain), w: SW, h: SH, sfx });
   const scratch = async () => { st.scratchUntil = performance.now() + 900; sfx('scratch'); await sleep(950); };
-  const dog = kind === 'dog';
 
   await scratch();
   await v.say('', '*scratch, scratch, scratch*');
@@ -92,16 +103,29 @@ export async function petArrives({ sfx }) {
   sfx('door');
   st.open = true;
   await sleep(600);
+  st.pet = 'both';
+  st.dripUntil = performance.now() + 6000;
+  sfx('woof');
+  setTimeout(() => sfx('meow'), 450);
+  await v.say('', 'Two soggy visitors are huddled on the step: a golden retriever, wagging so hard its whole body wiggles…');
+  await v.say('', '…and a small black cat, glaring at the rain like it’s a personal insult.');
+  await v.say(me, 'Oh, you poor drowned things! I’ve only got room for one of you, though…');
+
+  const kind = (await v.choose(me, 'Who’s coming inside?', ['The golden retriever', 'The black cat'])) === 0 ? 'dog' : 'cat';
+  const dog = kind === 'dog';
+  const other = dog ? 'cat' : 'dog';
   st.pet = kind;
-  st.dripUntil = performance.now() + 4000;
+  st.leaving = other;
+  st.leaveAt = performance.now();
   sfx(dog ? 'woof' : 'meow');
+  await v.say('', dog
+    ? 'The cat gives the dog a long look, flicks its tail, and pads off toward the farm down the lane. It seems to know its way home.'
+    : 'The retriever gives the cat a friendly sniff, then bounds off toward the farm down the lane, tail still going. It seems to know its way home.');
   if (dog) {
-    await v.say('', 'A soaking-wet golden retriever is sitting on the step. Its whole body wiggles when it wags.');
-    await v.say(me, 'Oh! Hello there, you poor drowned thing!');
-    await v.say('', 'It shakes itself off. Thoroughly. Now you’re wet too.');
+    await v.say('', 'The retriever trots inside and shakes itself off. Thoroughly. Now you’re wet too.');
+    await v.say(me, 'Hello there, you good thing!');
   } else {
-    await v.say('', 'A small black cat slips past your ankles before you can say a word.');
-    await v.say('', 'It shakes the rain off each paw, one at a time, then stares up at you like it has always lived here.');
+    await v.say('', 'The cat slips past your ankles, shakes the rain off each paw one at a time, then stares up at you like it has always lived here.');
     await v.say(me, 'Well. Hello to you too.');
   }
 

@@ -50,8 +50,10 @@ export function openVN({ drawScene, w = 96, h: H = 72, sfx }) {
     },
     async choose(speaker, line, options) {
       await type(speaker, line);
+      // Briefly ignore taps so the tap that skipped the text can't land on a choice.
+      const shownAt = performance.now();
       return new Promise(res => extra.replaceChildren(...options.map((o, i) =>
-        h('button', { class: 'btn vn-choice', onclick: () => { sfx('select'); res(i); } }, o))));
+        h('button', { class: 'btn vn-choice', onclick: () => { if (performance.now() - shownAt < 350) return; sfx('select'); res(i); } }, o))));
     },
     async ask(speaker, line, { suggestions = [], placeholder = '' } = {}) {
       await type(speaker, line);
