@@ -1,2 +1,2 @@
 // Bump on every release. Keep sw.js VERSION in step so phones fetch the new files.
-export const VERSION = '0.11.3';
+export const VERSION = '0.12.0';

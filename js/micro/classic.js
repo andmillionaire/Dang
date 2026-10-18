@@ -130,20 +130,20 @@ export default [
 
   // 2. Eat every dot before the ghost gets you.
   {
-    id: 'cl-dots', cmd: 'Chomp ’em!', theme: 'classic', time: 7,
+    id: 'cl-dots', cmd: 'Chomp ’em!', theme: 'classic', time: 8,
     setup({ stage, win, lose, sfx, speed, frame, pos, expose }) {
       const ctx = scene(stage);
       const g0 = { x: 85, y: 15 };
-      const dots = spots(5 + Math.round(speed), 14, 10).filter(p => dist(p, g0) > 22 && dist(p, { x: 15, y: 85 }) > 8);
-      while (dots.length < 5) dots.push({ x: 20 + rnd(60), y: 40 + rnd(40) });
+      const dots = spots(4 + Math.round(speed), 14, 10).filter(p => dist(p, g0) > 22 && dist(p, { x: 15, y: 85 }) > 8);
+      while (dots.length < 4) dots.push({ x: 20 + rnd(60), y: 40 + rnd(40) });
       const s = expose({ c: { x: 15, y: 85 }, t: { x: 15, y: 85 }, g: { ...g0 }, dots: dots.map(d => ({ ...d, eaten: false })) });
       follow(stage, pos, (p, phase) => { if (phase !== 'up') s.t = { x: clamp(p.x, 5, 95), y: clamp(p.y, 5, 95) }; });
       let face = 1, ft = 0;
       frame(dt => {
         ft += dt;
-        const dx = s.t.x - s.c.x, dy = s.t.y - s.c.y, d = Math.hypot(dx, dy), step = 65 * dt;
+        const dx = s.t.x - s.c.x, dy = s.t.y - s.c.y, d = Math.hypot(dx, dy), step = 70 * dt;
         if (d > 0.5) { const k = Math.min(1, step / d); s.c.x += dx * k; s.c.y += dy * k; if (Math.abs(dx) > 0.5) face = dx > 0 ? 1 : -1; }
-        const gx = s.c.x - s.g.x, gy = s.c.y - s.g.y, gd = Math.hypot(gx, gy) || 1, gv = (10 + 8 * speed) * dt;
+        const gx = s.c.x - s.g.x, gy = s.c.y - s.g.y, gd = Math.hypot(gx, gy) || 1, gv = (10 + 5 * speed) * dt;
         s.g.x += (gx / gd) * gv; s.g.y += (gy / gd) * gv;
         for (const o of s.dots) if (!o.eaten && dist(o, s.c) < 6) { o.eaten = true; sfx('peg', s.dots.filter(q => q.eaten).length); }
         if (dist(s.g, s.c) < 7) { sfx('nope'); return lose(); }
@@ -158,18 +158,31 @@ export default [
       });
     },
     async solve(b, s) {
+      // distance from the ghost to the straight path c -> p
+      const segD = (p, g) => {
+        const vx = p.x - s.c.x, vy = p.y - s.c.y, L = vx * vx + vy * vy || 1;
+        const k = clamp(((g.x - s.c.x) * vx + (g.y - s.c.y) * vy) / L, 0, 1);
+        return Math.hypot(s.c.x + vx * k - g.x, s.c.y + vy * k - g.y);
+      };
       b.down({ ...s.c });
       while (!b.over()) {
         let tgt;
-        if (dist(s.g, s.c) < 16) {
-          const ax = s.c.x - s.g.x, ay = s.c.y - s.g.y, d = Math.hypot(ax, ay) || 1;
-          tgt = { x: clamp(s.c.x + (ax / d) * 25, 6, 94), y: clamp(s.c.y + (ay / d) * 25, 6, 94) };
+        const left = s.dots.filter(o => !o.eaten);
+        if (dist(s.g, s.c) < 11) {
+          // flee away from the ghost, towards open space
+          let best = null, bs = -1;
+          for (let a = 0; a < 16; a++) {
+            const p = { x: clamp(s.c.x + Math.cos((a / 16) * Math.PI * 2) * 20, 6, 94), y: clamp(s.c.y + Math.sin((a / 16) * Math.PI * 2) * 20, 6, 94) };
+            const sc = segD(p, s.g) + dist(p, s.g) * 0.5;
+            if (sc > bs) { bs = sc; best = p; }
+          }
+          tgt = best;
         } else {
-          const left = s.dots.filter(o => !o.eaten).sort((p, q) => (dist(p, s.c) + (dist(p, s.g) < 14 ? 60 : 0)) - (dist(q, s.c) + (dist(q, s.g) < 14 ? 60 : 0)));
-          tgt = left[0] || s.c;
+          const cost = o => dist(o, s.c) + (segD(o, s.g) < 10 ? 80 : 0);
+          tgt = left.sort((p, q) => cost(p) - cost(q))[0] || s.c;
         }
         b.move(tgt);
-        await b.wait(25);
+        await b.wait(20);
       }
       b.up(s.c);
     },
@@ -945,17 +958,17 @@ export default [
 
   // 19. Skateboard: hold for a big ollie, tap for a small one.
   {
-    id: 'cl-ollie', cmd: 'Ollie!', theme: 'classic', time: 6,
+    id: 'cl-ollie', cmd: 'Ollie!', theme: 'classic', time: 7,
     setup({ stage, win, lose, sfx, speed, frame, expose }) {
       const ctx = scene(stage);
       const v = 40 * speed, n = speed > 1.6 ? 3 : 2;
       const kinds = shuffle(['cone', 'bin', ...(n === 3 ? [pick(['cone', 'bin'])] : [])]);
-      const s = expose({ hx: 25, v, jt: -1, H: 12, crouch: false, obs: kinds.map((k, i) => ({ k, x: 108 + i * v * 1.1, passed: false })) });
+      const s = expose({ hx: 25, v, jt: -1, H: 12, crouch: false, obs: kinds.map((k, i) => ({ k, x: 108 + i * v * 1.4, passed: false })) });
       const AIR = 0.7;
       const hy = () => (s.jt >= 0 ? Math.sin((Math.PI * s.jt) / AIR) * s.H : 0);
       holdable(stage, () => { if (s.jt < 0) { s.crouch = true; sfx('select'); } }, held => {
         if (!s.crouch) return;
-        s.crouch = false; s.jt = 0; s.H = clamp(12 + held * 60, 12, 38); sfx('swap');
+        s.crouch = false; s.jt = 0; s.H = clamp(12 + held * 80, 12, 38); sfx('swap');
       });
       let ft = 0;
       frame(dt => {
@@ -985,7 +998,7 @@ export default [
     },
     async solve(b, s) {
       for (const o of s.obs) {
-        const hold = o.k === 'cone' ? 0.04 : 0.5;
+        const hold = o.k === 'cone' ? 0.04 : 0.4;
         await b.until(() => s.jt < 0 && (o.x - s.hx) / s.v <= 0.35 + hold);
         if (b.over()) return;
         b.down({ x: 50, y: 50 });
