@@ -21,7 +21,7 @@ const fresh = () => ({
   boosts: {},
   wardrobe: { owned: { casual: true }, equip: { head: null, outfit: 'casual', held: null, brooch: null } },
   stats: { miniWins: 0, blasts: 0 },
-  arcade: { owned: false, meowdoku: { unlocked: 1, best: {} }, micro: { best: 0, runs: 0, seen: {}, cleared: {}, sections: {} }, pegs: { unlocked: 1, best: {} } },
+  arcade: { owned: false, meowdoku: { unlocked: 1, best: {} }, micro: { best: 0, runs: 0, seen: {}, cleared: {}, sections: {} }, pegs: { unlocked: 1, best: {} }, wordsearch: { unlocked: 1, best: {} } },
   playerId: null,
   seen: {},
   sound: true,
@@ -48,6 +48,7 @@ function migrate(saved) {
   s.arcade.meowdoku = { ...base.arcade.meowdoku, ...s.arcade.meowdoku };
   s.arcade.micro = { ...base.arcade.micro, ...s.arcade.micro };
   s.arcade.pegs = { ...base.arcade.pegs, ...s.arcade.pegs };
+  s.arcade.wordsearch = { ...base.arcade.wordsearch, ...s.arcade.wordsearch };
   s.wardrobe.equip = { ...base.wardrobe.equip, ...s.wardrobe.equip };
   s.v = 2;
   return s;

@@ -12,7 +12,7 @@ const DB_FILE = path.join(DATA_DIR, 'leaderboard.json');
 
 // Games with leaderboards. Timed games rank each level by fastest time; score games keep one
 // high score per player (higher is better).
-const GAMES = { meowdoku: { levels: 100 }, micro: { score: true, max: 999 }, starpegs: { score: true, max: 1e9 } };
+const GAMES = { meowdoku: { levels: 100 }, micro: { score: true, max: 999 }, starpegs: { score: true, max: 1e9 }, wordsearch: { levels: 100 } };
 
 // ---------- storage ----------
 let db = {};

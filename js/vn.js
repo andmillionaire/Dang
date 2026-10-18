@@ -55,10 +55,11 @@ export function openVN({ drawScene, w = 96, h: H = 72, sfx }) {
       return new Promise(res => extra.replaceChildren(...options.map((o, i) =>
         h('button', { class: 'btn vn-choice', onclick: () => { if (performance.now() - shownAt < 350) return; sfx('select'); res(i); } }, o))));
     },
-    async ask(speaker, line, { suggestions = [], placeholder = '' } = {}) {
+    async ask(speaker, line, { suggestions = [], placeholder = '', value = '' } = {}) {
       await type(speaker, line);
       return new Promise(res => {
         const input = h('input', { class: 'name-input', maxlength: 12, placeholder, autocomplete: 'off', autocapitalize: 'words', spellcheck: 'false' });
+        input.value = value;
         const ok = h('button', { class: 'btn primary', onclick: () => { const v = input.value.trim(); if (v) { sfx('select'); res(v); } else input.focus(); } }, 'That’s their name');
         input.addEventListener('keydown', e => { if (e.key === 'Enter') ok.click(); });
         extra.replaceChildren(input,

@@ -80,7 +80,7 @@ function drawDoorScene(ctx, now, st, rain) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, SW, SH);
 }
 
-const NAMES = { dog: ['Biscuit', 'Sunny', 'Maple', 'Honey', 'Waffles'], cat: ['Luna', 'Pepper', 'Mochi', 'Midnight', 'Inkwell'] };
+const NAMES = { dog: ['Charlie', 'Biscuit', 'Sunny', 'Maple', 'Honey'], cat: ['Luna', 'Pepper', 'Mochi', 'Midnight', 'Inkwell'] };
 
 // Night 2: something scratches at the door. Two somethings, actually, and you choose who stays.
 export async function petArrives({ sfx }) {
@@ -136,7 +136,7 @@ export async function petArrives({ sfx }) {
   }
 
   const name = await v.ask(me, dog ? 'Every good dog needs a name…' : 'Every cat needs a name. Not that they’ll answer to it…',
-    { suggestions: NAMES[kind], placeholder: dog ? 'Dog’s name' : 'Cat’s name' });
+    { suggestions: NAMES[kind], placeholder: dog ? 'Dog’s name' : 'Cat’s name', value: dog ? 'Charlie' : '' });
   S.pet = { kind, name: name.slice(0, 12) };
   persist();
   sfx(dog ? 'woof' : 'meow');
