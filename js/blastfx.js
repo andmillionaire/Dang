@@ -234,3 +234,33 @@ async function storm(board, g, cells, at, pace) {
   await Promise.all((await Promise.all(jobs)).filter(Boolean));
 }
 
+
+// ---------- Treasure chest: it bursts open in a fountain of coins ----------
+export async function treasureFx(board, p) {
+  const g = board.geom();
+  board.hooks.sfx('boom');
+  board.hooks.buzz && board.hooks.buzz([60, 40, 80]);
+  board.shake = 16;
+  board.flash = 1;
+  board.ring(p, 90, '#ffe27a');
+  setTimeout(() => board.ring(p, 60, '#fff8e0'), 120);
+  board.say('Treasure!', '#ffe27a');
+  for (let i = 0; i < 4; i++) board.burst(p, i % 2 ? '#ffe27a' : '#fff8e0', 16);
+  if (reduced()) return sleep(500);
+  const x0 = g.cx(p.c), y0 = g.cy(p.r);
+  const coins = Array.from({ length: 26 }, () => ({ x: x0, y: y0, vx: (Math.random() - 0.5) * 2.6, vy: -2.5 - Math.random() * 3, spin: Math.random() * 6, img: Math.random() < 0.8 ? ICONS.coin : ICONS.shard }));
+  const done = actor(board, ctx => {
+    for (const c of coins) {
+      const w = Math.max(1, Math.abs(Math.cos(c.spin)) * 8);
+      if (c.img) ctx.drawImage(c.img, Math.round(c.x - w / 2), Math.round(c.y - 4), w, 8);
+    }
+  });
+  let last = 0;
+  await tween(1100, t => {
+    const steps = Math.round(t * 66) - last;
+    last += steps;
+    for (let s = 0; s < steps; s++) for (const c of coins) { c.x += c.vx; c.y += c.vy; c.vy += 0.12; c.spin += 0.3; }
+    if (Math.random() < 0.3) board.hooks.sfx('coin');
+  });
+  done();
+}

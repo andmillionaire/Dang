@@ -558,6 +558,22 @@ export const SPECIAL_ROWS = {
   ],
 };
 
+// Treasure chest tile (12x12): the rare drop you steer to the bottom of the board.
+export const CHEST_ROWS = [
+  '..kkkkkkkk..',
+  '.kbbbbbbbbk.',
+  'kbbtbbbbtbbk',
+  'kyyyyyyyyyyk',
+  'kbbbbyybbbbk',
+  'kbbbykkybbbk',
+  'kyyyykkyyyyk',
+  'kbbbbyybbbbk',
+  'kbtbbbbbbtbk',
+  'kbbbbbbbbbbk',
+  'kyyyyyyyyyyk',
+  'kkkkkkkkkkkk',
+];
+
 // ---------- arcade Mewdoku: magical-girl portraits (12x12) ----------
 // H hair, G hair shine, X tiara gem, E eyes, s skin, m mouth.
 export const GIRL_ROWS = {

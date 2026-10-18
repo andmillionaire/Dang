@@ -813,3 +813,30 @@ div.word-slots b.on { background: var(--gold); animation: placeIn .3s cubic-bezi
 .ws-word.got { color: #6a5a7a; text-decoration: line-through; }
 .mc-ws { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); width: 78%; }
 .mc-ws .ws-cell.found { background: var(--gold); }
+
+/* ---------- treasure chest bonus ---------- */
+.tr { justify-content: center; }
+.tr-intro { display: grid; gap: 14px; justify-items: center; padding: 10px; }
+.tr-title { margin: 0; font-size: 40px; color: var(--gold); text-align: center; text-shadow: 3px 3px 0 #8e3a2a; animation: placeIn .5s cubic-bezier(.3, 1.8, .5, 1); }
+.tr-loot { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; font-size: 24px; }
+.tr-loot .ico { width: 24px; height: 24px; }
+.tr-canvas { min-height: 60dvh; }
+.jp { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; overflow: hidden; cursor: pointer;
+  background: linear-gradient(120deg, #ff5a8a, #ffe27a, #8fe08a, #6ad0ff, #c08aff, #ff5a8a); background-size: 400% 400%; animation: jpBg 1.2s linear infinite; }
+.jp::before { content: ''; position: absolute; inset: 0; background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .25) 0 10deg, transparent 10deg 20deg); animation: jpSpin 3s linear infinite; }
+.jp.out { opacity: 0; transition: opacity .3s; }
+.jp-text { position: relative; display: grid; justify-items: center; gap: 6px; text-align: center; }
+.jp-text b { font-size: clamp(64px, 20vw, 120px); color: #fff8e0; line-height: .9; text-shadow: 5px 5px 0 #8e3a2a, -3px -3px 0 #6a3e94; animation: jpBounce .45s ease-in-out infinite alternate; }
+.jp-text span { font-size: 30px; color: #1a1220; }
+.jp-loot { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; max-width: 330px; background: rgba(26, 18, 32, .75); padding: 10px 14px; }
+.jp-loot span { font-size: 22px; color: var(--gold); }
+.jp-loot .ico { width: 22px; height: 22px; }
+.jp-tap { position: absolute; bottom: 8%; left: 0; right: 0; text-align: center; font-size: 22px; color: #1a1220; animation: blink 1s steps(2) infinite; }
+.jp-rain { position: absolute; inset: 0; pointer-events: none; }
+.jp-coin { position: absolute; top: -40px; width: 32px; height: 32px; animation: jpFall linear forwards; }
+@keyframes jpBg { to { background-position: 400% 0; } }
+@keyframes jpSpin { to { transform: rotate(360deg) scale(1.5); } }
+@keyframes jpBounce { from { transform: scale(1) rotate(-4deg); } to { transform: scale(1.12) rotate(4deg); } }
+@keyframes jpFall { to { transform: translateY(110vh) rotate(720deg); } }
+body.jp-shake #app, body.jp-shake .app { animation: shake .12s infinite; }
+@media (prefers-reduced-motion: reduce) { .jp, .jp::before, .jp-text b, .jp-coin { animation: none; } }

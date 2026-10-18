@@ -1,6 +1,6 @@
 import { fitCanvas, toLogical, sleep, tween, ease } from './pixel.js';
-import { TILES, TILES_WHITE, TILES_GREY, TILE_COLORS, SPECIALS } from './sprites.js';
-import { blastFx } from './blastfx.js';
+import { TILES, TILES_WHITE, TILES_GREY, TILE_COLORS, SPECIALS, CHEST } from './sprites.js';
+import { blastFx, treasureFx } from './blastfx.js';
 
 const CELL = 14, PAD = 4;
 // The board grows as you progress, so its size is set per level in start().
@@ -93,10 +93,10 @@ export class Board {
   // ---------- board logic ----------
   rnd() { return Math.floor(Math.random() * this.cfg.types); }
   newTile(t, c, r) { return { t, sp: null, x: c, y: r, s: 1, charged: false, dead: false, id: ++uid }; }
-  // Colour at a cell: -1 empty, -2 charged tile (never matches).
+  // Colour at a cell: -1 empty, -2 charged tile, -3 treasure chest (neither ever matches).
   T(r, c) {
     const t = this.grid[r] && this.grid[r][c];
-    return !t ? -1 : t.sp ? -2 : t.t;
+    return !t ? -1 : t.sp ? -2 : t.chest ? -3 : t.t;
   }
   specials() { return this.grid.flat().filter(t => t && t.sp); }
 
@@ -302,6 +302,7 @@ export class Board {
   }
 
   async afterTurn(gen) {
+    if (gen === this.gen && this.running) await this.openChests(gen);
     if (gen !== this.gen || !this.running || this.checkEnd()) return;
     await this.ensureMoves();
     this.busy = false;
@@ -395,7 +396,22 @@ export class Board {
         }),
       ]);
       await this.collapse();
+      await this.openChests(gen);
       groups = this.findGroups();
+    }
+  }
+
+  // A chest that reaches the bottom row bursts open: loot, then the bonus Plinko (hooks.onTreasure).
+  async openChests(gen) {
+    for (let c = 0; c < COLS; c++) {
+      const t = this.grid[ROWS - 1][c];
+      if (!t || !t.chest || gen !== this.gen) continue;
+      const p = { r: ROWS - 1, c };
+      await treasureFx(this, p);
+      t.chest = false;
+      await this.pop([p], p);
+      await this.collapse();
+      if (this.hooks.onTreasure) await this.hooks.onTreasure(this);
     }
   }
 
@@ -403,7 +419,7 @@ export class Board {
   blastCells(kinds, at) {
     const big = !!this.cfg.bigBlasts;
     const out = new Map();
-    const add = (r, c) => { if (inBounds(r, c) && this.grid[r][c] && !this.grid[r][c].sp) out.set(r * COLS + c, { r, c }); };
+    const add = (r, c) => { if (inBounds(r, c) && this.grid[r][c] && !this.grid[r][c].sp && !this.grid[r][c].chest) out.set(r * COLS + c, { r, c }); };
     if (kinds.length === 2 && kinds[0] === kinds[1]) {
       for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) add(r, c);
       return [...out.values()];
@@ -519,6 +535,11 @@ export class Board {
       }
     }
     if (!moving.length) return;
+    // Now and then (1 in 200 refills) a treasure chest drops in with the new tiles. One at a time.
+    const fresh = moving.filter(t => t.fromY < 0);
+    if (fresh.length && Math.random() < (this.cfg.chestChance ?? 1 / 200) && !this.grid.flat().some(x => x && x.chest)) {
+      fresh[(Math.random() * fresh.length) | 0].chest = true;
+    }
     const dist = Math.max(...moving.map(t => t.toY - t.fromY));
     const fall = 120 + dist * 45, stagger = 14, total = fall + stagger * (COLS - 1);
     await tween(total, k => {
@@ -537,7 +558,7 @@ export class Board {
     if (this.findMoves().length) return;
     this.hooks.toast('No swaps left. Shuffling!');
     await sleep(500);
-    const tiles = this.grid.flat().filter(t => !t.sp);
+    const tiles = this.grid.flat().filter(t => !t.sp && !t.chest);
     do {
       for (let i = tiles.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -670,13 +691,18 @@ export class Board {
         ctx.fillStyle = `rgba(255,226,122,${0.35 + pulse * 0.45})`;
         ctx.fillRect(PAD + t.x * CELL, PAD + t.y * CELL, CELL, CELL);
       }
-      const img = t.sp ? SPECIALS[t.sp] : t.dead ? TILES_GREY[t.t] : TILES[t.t];
+      if (t.chest) {
+        // the chest shimmers gold so it's easy to spot
+        ctx.fillStyle = `rgba(255,226,122,${0.25 + slow * 0.35})`;
+        ctx.fillRect(PAD + t.x * CELL, PAD + t.y * CELL, CELL, CELL);
+      }
+      const img = t.chest ? CHEST : t.sp ? SPECIALS[t.sp] : t.dead ? TILES_GREY[t.t] : TILES[t.t];
       if (t.dead) ctx.globalAlpha = 0.5;
       const sw = 12 * t.s * (t.sx || 1), sh = 12 * t.s * (t.sy || 1);
       const dx = px + 6 - sw / 2, dy = (t.sy || 1) < 1 ? py + 12 - sh : py + 6 - sh / 2;
       if (sw !== 12 || sh !== 12) ctx.drawImage(img, dx, dy, sw, sh);
       else ctx.drawImage(img, px, py);
-      if (t.flash > 0.02 && !t.sp && !t.dead) {
+      if (t.flash > 0.02 && !t.sp && !t.dead && !t.chest) {
         ctx.globalAlpha = Math.min(1, t.flash);
         ctx.drawImage(TILES_WHITE[t.t], dx, dy, sw, sh);
       }

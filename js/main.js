@@ -18,6 +18,7 @@ import * as audio from './audio.js';
 import { $, h, icon, hydrateIcons, showModal, toast, countTo, confetti, sparkle } from './ui.js';
 import { iconURL } from './sprites.js';
 import { VERSION } from './version.js';
+import { rollLoot, playPlinko, prizeOf, jackpotFx, CHUTES } from './treasure.js';
 
 const sfx = audio.sfx;
 audio.setSound(S.sound);
@@ -55,6 +56,7 @@ const board = new Board($('#boardCanvas'), {
   onSpecial: runSpecial,
   onCreate: explainCharged,
   onEnd: onLevelEnd,
+  onTreasure: openTreasure,
 });
 
 function show(name) {
@@ -306,6 +308,47 @@ async function runSpecial(b, kinds) {
     updateHud();
   }
   return res;
+}
+
+// A treasure chest reached the bottom: loot, then the bonus Plinko ball.
+async function openTreasure(b) {
+  const loot = rollLoot();
+  S.coins += loot.coins;
+  S.mats.lumber += loot.lumber;
+  S.mats.fabric += loot.fabric;
+  S.mats.kit += loot.kit;
+  S.seeds[loot.seed] = (S.seeds[loot.seed] || 0) + loot.seedN;
+  S.stats.chests = (S.stats.chests || 0) + 1;
+  persist();
+  updateHud();
+  const quit = $('#quitBtn');
+  quit.disabled = true;
+  await b.morph(1);
+  screens.match.classList.add('mg-open');
+  const box = $('#morph');
+  box.hidden = false;
+  const chute = await playPlinko(box, { sfx, loot });
+  const prize = prizeOf(chute);
+  S.coins += prize.coins || 0;
+  S.shards += prize.shards || 0;
+  S.mats.lumber += prize.lumber || 0;
+  S.mats.fabric += prize.fabric || 0;
+  S.mats.kit += prize.kit || 0;
+  if (prize.seeds) for (const k of Object.keys(S.seeds)) S.seeds[k] += prize.seeds;
+  persist();
+  updateHud();
+  if (CHUTES[chute].prize.mega) {
+    S.stats.jackpots = (S.stats.jackpots || 0) + 1;
+    persist();
+    await jackpotFx(sfx);
+  } else {
+    toast(`Bonus: ${[prize.coins && `${prize.coins} coins`, prize.shards && `${prize.shards} star shards`, prize.lumber && `${prize.lumber} lumber`, prize.fabric && `${prize.fabric} fabric`, prize.seeds && `${prize.seeds} of every seed`].filter(Boolean).join(', ')}!`);
+  }
+  box.hidden = true;
+  box.replaceChildren();
+  screens.match.classList.remove('mg-open');
+  await b.morph(0);
+  quit.disabled = false;
 }
 
 // Level-cleared fanfare: confetti, a chime per star, coins counting up.
