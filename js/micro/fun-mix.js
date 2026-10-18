@@ -128,7 +128,7 @@ function planSteps(safe, from, goal, t0, limit, DT = 0.04, hold = 3) {
     if (safe(st, t0 + (k + 1) * DT)) stack.push([st, k + 1, moves]);
     let ok = true;
     for (let j = 0; j <= hold; j++) if (!safe(st + 1, t0 + (k + j) * DT)) { ok = false; break; }
-    if (ok) stack.push([st + 1, k + 2, [...moves, t0 + k * DT]]);
+    if (ok) stack.push([st + 1, k + 3, [...moves, t0 + k * DT]]);
   }
   return null;
 }
@@ -287,7 +287,7 @@ export default [
       });
     },
     async solve(b, s) {
-      await b.until(() => s.t > 0.2 && Math.abs(s.angAt(s.t + 0.02)) < s.tol * 0.3);
+      await b.until(() => s.t > 0.2 && Math.abs(s.ang) < s.tol * 0.6);
       await b.tap({ x: 50, y: 50 });
     },
   },
@@ -332,7 +332,7 @@ export default [
     },
     async solve(b, s) {
       while (!b.over() && s.level < 3) {
-        await b.until(() => s.busy <= 0 && Math.abs(s.gapAt(s.level, s.t + 0.02) - 50) < 1.6);
+        await b.until(() => s.busy <= 0 && Math.abs(s.gapAt(s.level, s.t) - 50) < 2.5);
         if (b.over()) break;
         await b.tap({ x: 50, y: 50 });
         await b.until(() => s.busy <= 0);
@@ -372,13 +372,17 @@ export default [
     },
     async solve(b, s) {
       b.down({ x: s.px, y: s.py });
+      let diving = false;
       while (!b.over()) {
         let tx, ty;
-        const lead = s.evx * 0.12;
-        if (s.py > s.ey - 12 && Math.abs(s.px - s.ex) < 16) { tx = s.ex + (s.px < s.ex ? -24 : 24); ty = s.py; }
-        else if (s.py > s.ey - 18) { tx = s.px; ty = s.ey - 26; }
-        else if (Math.abs(s.px - (s.ex + lead)) > 3) { tx = s.ex + lead; ty = s.ey - 24; }
-        else { tx = s.ex + lead; ty = s.ey - 6; }
+        const ex = s.ex + s.evx * 0.12;
+        if (diving && (Math.abs(s.px - ex) > 6 || s.fall > 0)) diving = false;
+        if (diving) { tx = ex; ty = s.ey - 4; }
+        else if (s.py > s.ey - 18) {
+          if (Math.abs(s.px - s.ex) < 16) { tx = s.ex + (s.px < s.ex ? -24 : 24); ty = s.py; }
+          else { tx = s.px; ty = s.ey - 26; }
+        } else if (Math.abs(s.px - ex) > 3) { tx = ex; ty = s.ey - 24; }
+        else { diving = true; tx = ex; ty = s.ey - 4; }
         b.move({ x: clamp(tx, 6, 94), y: clamp(ty, 12, 88) });
         await b.wait(20);
       }
@@ -469,7 +473,7 @@ export default [
         for (const l of s.landed) put(ctx, spr(l.k), l.ex, l.ey, 1.1);
         for (const f of s.flying) put(ctx, spr(f.k), f.x, f.y, 1.2);
         put(ctx, spr(LEADER), 50, 86, 1.4);
-        for (let i = 0; i < s.squad; i++) put(ctx, spr(kinds[i % 3]), 30 + (i % 4) * 4 - (i > 3 ? 40 : 0) + (i > 3 ? 72 : 0), 92, 0.9);
+        for (let i = 0; i < s.squad; i++) put(ctx, spr(kinds[i % 3]), i < 4 ? 30 + i * 4 : 58 + (i - 4) * 4, 92, 0.9);
         txt(ctx, 'TAP THE PELLET', 50, 8, '#fff4e0', 8);
       });
     },
@@ -686,7 +690,7 @@ export default [
 
   // 13. The original WarioWare microgame: pick the nose!
   {
-    id: 'fx-wnose', cmd: 'Pick it! (classic)', theme: 'funtendo', time: 5,
+    id: 'fx-wnose', cmd: 'Pick the nose!', theme: 'funtendo', time: 5,
     setup({ stage, win, lose, sfx, speed, frame, expose }) {
       const ctx = scene(stage);
       const s = expose({ t: 0, w: 2 * speed, ph: Math.random() * 6, fly: -1, res: null });
@@ -794,7 +798,7 @@ export default [
       const ext = (i, t) => 0.5 + 0.5 * Math.sin(t * s.tent[i].w + s.tent[i].ph); // tentacle i reaches step i + 1
       s.safe = (st, t) => st <= 0 || st >= 4 || ext(st - 1, t) < s.thr;
       let dead = false;
-      tapper(stage, () => { if (dead || s.cool > 0 || s.step >= 4) return; s.step++; s.cool = 0.1; sfx('select'); if (s.step >= 4) { dead = true; sfx('coin'); setTimeout(win, 250); } });
+      tapper(stage, () => { if (dead || s.cool > 0 || s.step >= 4) return; s.step++; s.cool = 0.05; sfx('select'); if (s.step >= 4) { dead = true; sfx('coin'); setTimeout(win, 250); } });
       frame(dt => {
         s.t += dt; s.cool = Math.max(0, s.cool - dt);
         if (!dead && !s.safe(s.step, s.t)) { dead = true; sfx('nope'); return lose(); }
@@ -953,7 +957,7 @@ export default [
       });
     },
     async solve(b, s) {
-      await b.until(() => Math.abs(s.xAt(s.t + 0.016) - 50) < s.tol * 0.35);
+      await b.until(() => s.t > 0.1 && Math.abs(s.x - 50) < s.tol * 0.6);
       await b.tap({ x: 50, y: 50 });
     },
   },
@@ -1348,7 +1352,6 @@ export default [
           if (H.ext > 0) { R(ctx, hx - 3, 20, 6, hy - 18, '#f4f4f4'); R(ctx, hx - 3, hy, 6, 4, '#e0e0e8'); }
           for (let i = 0; i < 4; i++) R(ctx, hx - 12 + i * 7, 20, 5, 6, '#e8e8f0');
           if (s.ph === 1 && H.st === 'stuck' && !H.hit) { circ(ctx, H.tx, 42, 6, Math.floor(ft * 10) % 2 ? '#ffe27a' : '#f39a3a'); txt(ctx, 'HIT IT!', H.tx, 52, '#ffe27a', 7); }
-          txt(ctx, `${Math.max(0, 3 - s.hits) + Math.max(0, 3 - s.bhits) + (s.blast ? 0 : 1)}`, 90, 6, '#fff4e0', 7);
         }
         if (s.ph === 2) {
           for (let i = 0; i < 6; i++) circ(ctx, s.ball.x, s.ball.y, 9 + i * 0.6, RAINBOW[(i + Math.floor(ft * 8)) % 6] + '30');
@@ -1371,7 +1374,7 @@ export default [
       await b.until(() => s.ph >= 1);
       while (!b.over() && s.ph < 1.5) {
         const H = s.hand;
-        if ((H.st === 'warn' || (H.st === 'hover' && H.t > 0.5)) && Math.abs(s.fx - (H.st === 'warn' ? H.tx : s.fx)) < 18) {
+        if (H.st === 'warn' && Math.abs(s.fx - H.tx) < 18) {
           const from = s.fx, to = from < 50 ? from + 34 : from - 34;
           b.down({ x: from, y: 84 });
           for (let i = 1; i <= 6; i++) { b.move({ x: from + ((to - from) * i) / 6, y: 84 }); await b.wait(15); }

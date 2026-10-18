@@ -6,6 +6,8 @@ import { ALL, THEMES } from '../micro/index.js';
 import { fetchScores, submitHighScore } from '../leaderboard.js';
 
 const GAME = 'micro';
+// Test hook: with window.__dangAutoplay set, every microgame plays itself via its solve().
+const auto = () => !!globalThis.__dangAutoplay;
 const LIVES = 4;
 const BOSS_EVERY = 10;
 const SPEED_EVERY = 5;
@@ -87,7 +89,7 @@ export function mountMicro(root, { sfx, changed, back }) {
       await sleep(score === 0 ? 1100 : faster || m.boss ? 1000 : 700);
       if (quit || !host.isConnected) return;
       if (!M.seen[m.id]) { M.seen[m.id] = true; persist(); }
-      const ok = await runMicro(host, m, { sfx, speed });
+      const ok = await runMicro(host, m, { sfx, speed, autoplay: auto() });
       if (quit || !host.isConnected) return;
       if (ok) {
         score++;
@@ -174,7 +176,7 @@ export function mountMicro(root, { sfx, changed, back }) {
       await sleep(i === 0 || m.boss ? 1100 : 700);
       if (quit || !host.isConnected) return;
       if (!M.seen[m.id]) { M.seen[m.id] = true; persist(); }
-      let ok = await runMicro(host, m, { sfx, speed });
+      let ok = await runMicro(host, m, { sfx, speed, autoplay: auto() });
       if (quit || !host.isConnected) return;
       if (ok) { if (!M.cleared[m.id]) { M.cleared[m.id] = true; persist(); } continue; }
       lives--;
@@ -185,7 +187,7 @@ export function mountMicro(root, { sfx, changed, back }) {
           h('div', { class: 'mc-lives' }, Array.from({ length: LIVES }, (_, k) => icon(k < lives ? 'heart' : 'heartOff')))));
         await sleep(1000);
         if (quit || !host.isConnected) return;
-        ok = await runMicro(host, m, { sfx, speed });
+        ok = await runMicro(host, m, { sfx, speed, autoplay: auto() });
         if (quit || !host.isConnected) return;
         if (!ok) { lives--; showLives(); }
       }

@@ -294,7 +294,7 @@ const games = [
         put(ctx, spr(s.holding || s.reveal ? ELF_UP : ELF), 50, 86, 1.2);
         // meter with the green zone
         R(ctx, 86, 20, 6, 60, '#1a1220');
-        R(ctx, 87, 20 + 60 * (1 - 1), 4, 60 * 0.3, '#4a8a3a');
+        R(ctx, 87, 80 - 60 / 1.15, 4, 60 * 0.3 / 1.15, '#4a8a3a');
         R(ctx, 87, 80 - 60 * Math.min(1.15, s.bar) / 1.15, 4, 60 * Math.min(1.15, s.bar) / 1.15, s.bar > 1 ? '#d0463c' : '#ffe27a');
         if (s.msgT > 0) txt(ctx, s.msg, 50, 20, '#d0463c', 11);
         txt(ctx, 'Hold, let go in the green', 46, 96, '#c9ad7f');
@@ -972,7 +972,7 @@ const games = [
         disc(ctx, 20, 120, 50, '#6fb04a'); disc(ctx, 80, 125, 50, '#5aa040');
         R(ctx, 0, 72, 100, 28, '#6fb04a'); R(ctx, 0, 72, 100, 2, '#a8d870');
         R(ctx, 70, 20, 14, 4, '#fff4e0'); R(ctx, 74, 17, 8, 3, '#fff4e0');
-        if (s.hold) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; for (let i = 0; i < 6; i++) { const x = K.x + 10 + ((t * 80 + i * 9) % 45); ctx.fillRect(100 - x + K.x - 10 + 10, K.y - 6 + (i % 3) * 5, 4, 1); } }
+        if (s.hold) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; for (let i = 0; i < 6; i++) ctx.fillRect(K.x + 50 - ((t * 80 + i * 9) % 42), K.y - 6 + (i % 3) * 5, 4, 1); }
         if (!s.gulp) put(ctx, spr(WADDLE), s.ex, K.y + 2, 1.4, s.edir > 0);
         put(ctx, spr(s.hold ? KIRBY_SUCK : KIRBY), K.x, K.y, s.gulp ? 2 : 1.6);
         bar(ctx, 6, 6, 40, s.breath, s.gasp > 0 ? '#d0463c' : '#f08ab0');
@@ -1153,7 +1153,8 @@ const games = [
         }
         const sq = s.roll > 0 ? Math.abs(Math.cos((0.5 - s.roll) * Math.PI * 4)) : 1;
         const sp = spr(ARWING);
-        if (sp.i.complete) ctx.drawImage(sp.i, Math.round(50 - 9 * 1.6 * sq / 2 * 2 / 2 * 2 / 2), 70, Math.max(2, Math.round(9 * 1.6 * sq)), 11);
+        const aw = Math.max(2, Math.round(9 * 1.6 * sq));
+        if (sp.i.complete) ctx.drawImage(sp.i, Math.round(50 - aw / 2), 70, aw, 11);
         if (s.roll > 0) { ctx.fillStyle = 'rgba(159,211,242,0.5)'; for (let i = 0; i < 6; i++) ctx.fillRect(50 + Math.cos(i + s.roll * 20) * 12, 75 + Math.sin(i + s.roll * 20) * 6, 2, 2); }
         for (let i = 0; i < s.need; i++) R(ctx, 40 + i * 7, 94, 5, 3, i < s.dodged ? '#ffe27a' : '#3a3a6a');
         txt(ctx, 'Swipe to roll!', 50, 30, '#9fd3f2', 8);

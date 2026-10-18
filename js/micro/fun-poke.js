@@ -798,7 +798,7 @@ export default [
       const fishX = () => s.state === 'swim' ? 90 - (s.t / SW) * 30 : s.state === 'leave' ? 60 + (s.t / SW) * 40 : 60;
       onTap(stage, pos, () => {
         if (caught >= 0) return;
-        if (s.state === 'dip' && s.big) { caught = 0; sfx('coin'); }
+        if (s.state === 'dip' && s.big) { caught = 0; s.state = 'caught'; sfx('coin'); }
         else { sfx('nope'); lose(); }
       });
       frame(dt => {
