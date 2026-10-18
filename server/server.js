@@ -1,4 +1,4 @@
-// Dang server: serves the game's static files and a small leaderboard API. No dependencies.
+// Dang server: serves the game's static files, a small leaderboard API and cloud saves. No dependencies.
 //   node server/server.js            (PORT=8080, ROOT=repo dir, DATA_DIR=./data by default)
 import http from 'node:http';
 import fs from 'node:fs';
@@ -9,6 +9,7 @@ const ROOT = path.resolve(process.env.ROOT || path.join(path.dirname(fileURLToPa
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
 const PORT = Number(process.env.PORT || 8080);
 const DB_FILE = path.join(DATA_DIR, 'leaderboard.json');
+const SAVE_DIR = path.join(DATA_DIR, 'saves');
 
 // Games with leaderboards. Timed games rank each level by fastest time; score games keep one
 // high score per player (higher is better).
@@ -119,6 +120,35 @@ function submit(body, ip) {
   return [200, { best: lv[player].time, ...levelBoard(game, level, player) }];
 }
 
+// ---------- cloud saves ----------
+// A save is stored under its save code (five words, e.g. "moon-quilt-cocoa-fern-42"). The file keeps
+// the latest save plus up to 8 older versions, at most one per hour.
+const validCode = s => typeof s === 'string' && /^[a-z]{2,10}(-[a-z]{2,10}){3}-[0-9]{2}$/.test(s);
+const saveFile = code => path.join(SAVE_DIR, code + '.json');
+const saveHits = new Map();
+function saveLimited(ip) {
+  const now = Date.now();
+  const recent = (saveHits.get(ip) || []).filter(t => now - t < 60_000);
+  recent.push(now);
+  saveHits.set(ip, recent);
+  if (saveHits.size > 5000) saveHits.clear();
+  return recent.length > 40;
+}
+function readSave(code) { try { return JSON.parse(fs.readFileSync(saveFile(code), 'utf8')); } catch { return null; } }
+function writeSave(code, data) {
+  const prev = readSave(code);
+  const now = Date.now();
+  const history = prev ? prev.history || [] : [];
+  // keep an older version roughly once an hour (the first after 10 minutes)
+  if (prev && (history[0] ? now - history[0].at > 3600_000 : now - prev.at > 600_000)) history.unshift({ at: prev.at, data: prev.data });
+  fs.mkdirSync(SAVE_DIR, { recursive: true });
+  const tmp = saveFile(code) + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify({ at: now, data, history: history.slice(0, 8) }));
+  fs.renameSync(tmp, saveFile(code));
+  return now;
+}
+const summary = d => ({ name: d?.hero?.name, day: d?.day, coins: d?.coins });
+
 // ---------- http ----------
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -187,6 +217,36 @@ function route(req, res) {
       try { body = JSON.parse(raw); } catch { return send(res, 400, { error: 'bad json' }); }
       const [status, out] = submit(body, ip);
       send(res, status, out);
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/save' && req.method === 'GET') {
+    const code = url.searchParams.get('code');
+    if (!validCode(code)) return send(res, 400, { error: 'bad code' });
+    if (saveLimited(ip)) return send(res, 429, { error: 'slow down' });
+    const f = readSave(code);
+    if (!f) return send(res, 404, { error: 'no save with that code' });
+    const v = Number(url.searchParams.get('v') || 0);
+    const pick = v ? f.history[v - 1] : { at: f.at, data: f.data };
+    if (!pick) return send(res, 404, { error: 'no such version' });
+    return send(res, 200, { at: pick.at, data: pick.data, versions: [{ at: f.at, ...summary(f.data) }, ...f.history.map(h => ({ at: h.at, ...summary(h.data) }))] });
+  }
+
+  if (url.pathname === '/api/save' && req.method === 'POST') {
+    let raw = '';
+    req.on('data', chunk => {
+      raw += chunk;
+      if (raw.length > 400_000) { send(res, 413, { error: 'too big' }); req.destroy(); }
+    });
+    req.on('end', () => {
+      if (res.writableEnded) return;
+      let body;
+      try { body = JSON.parse(raw); } catch { return send(res, 400, { error: 'bad json' }); }
+      if (!validCode(body.code)) return send(res, 400, { error: 'bad code' });
+      if (!body.data || typeof body.data !== 'object' || !body.data.hero) return send(res, 400, { error: 'bad save' });
+      if (saveLimited(ip)) return send(res, 429, { error: 'slow down' });
+      try { send(res, 200, { ok: true, at: writeSave(body.code, body.data) }); } catch { send(res, 500, { error: 'could not save' }); }
     });
     return;
   }

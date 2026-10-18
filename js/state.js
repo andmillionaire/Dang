@@ -54,16 +54,60 @@ function migrate(saved) {
   return s;
 }
 
+const BACKUP_KEY = 'dang-cabin-backups';
+let loadFailed = false;
+
 function load() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) return migrate(JSON.parse(raw));
-  } catch {}
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch {}
+  if (raw) {
+    try { return migrate(JSON.parse(raw)); } catch (err) {
+      // Never overwrite a save we couldn't read: set it aside so it can be recovered.
+      loadFailed = true;
+      try { localStorage.setItem(`${KEY}-unreadable-${Date.now()}`, raw); } catch {}
+      console.error('Save failed to load; kept a copy.', err);
+    }
+  }
   return fresh();
 }
 
 export const S = load();
+export const LOAD_FAILED = loadFailed;
+
+// Ask the browser not to clear our storage when space runs low (best effort).
+try { navigator.storage?.persist?.(); } catch {}
+
+const listeners = [];
+export const onPersist = fn => listeners.push(fn);
 
 export function persist() {
+  S.savedAt = Date.now();
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {}
+  for (const fn of listeners) { try { fn(S); } catch {} }
+}
+
+// ---------- local backups ----------
+// Up to 5 rolling copies, at most one every 6 hours, taken at launch. They survive a bad update
+// (but not deleting the app's data: that's what the cloud save code is for).
+export function localBackups() {
+  try { return JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]'); } catch { return []; }
+}
+function snapshot() {
+  if (!S.hero) return;
+  const list = localBackups();
+  if (list[0] && Date.now() - list[0].at < 6 * 3600 * 1000) return;
+  list.unshift({ at: Date.now(), day: S.day, coins: S.coins, raw: JSON.stringify(S) });
+  try { localStorage.setItem(BACKUP_KEY, JSON.stringify(list.slice(0, 5))); } catch {}
+}
+if (!loadFailed) snapshot();
+
+// Replace the whole save (restore from a backup, file or cloud code), then reload.
+export function replaceSave(data) {
+  const obj = typeof data === 'string' ? JSON.parse(data) : data;
+  if (!obj || typeof obj !== 'object' || !obj.hero) throw new Error('That doesn’t look like a Dang save.');
+  migrate(obj); // throws if it can't be read
+  // keep what we had, just in case
+  try { if (S.hero) { const list = localBackups(); list.unshift({ at: Date.now(), day: S.day, coins: S.coins, raw: JSON.stringify(S), before: 'restore' }); localStorage.setItem(BACKUP_KEY, JSON.stringify(list.slice(0, 5))); } } catch {}
+  localStorage.setItem(KEY, JSON.stringify(obj));
+  location.reload();
 }

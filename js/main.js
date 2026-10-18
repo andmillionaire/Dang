@@ -18,6 +18,7 @@ import * as audio from './audio.js';
 import { $, h, icon, hydrateIcons, showModal, toast, countTo, confetti, sparkle } from './ui.js';
 import { iconURL } from './sprites.js';
 import { VERSION } from './version.js';
+import { startAutoBackup, openSaveMenu, restoreFromCode } from './cloudsave.js';
 import { rollLoot, playPlinko, prizeOf, jackpotFx, CHUTES } from './treasure.js';
 
 const sfx = audio.sfx;
@@ -106,6 +107,9 @@ function updateMatchHud(b) {
   $('#mDay').textContent = `Day ${S.day} · level ${S.today.played} of ${LEVELS_PER_DAY} today`;
 }
 
+$('#saveBtn').addEventListener('click', openSaveMenu);
+startAutoBackup();
+
 $('#soundBtn').addEventListener('click', () => {
   S.sound = !S.sound;
   persist();
@@ -137,6 +141,7 @@ function openCreator(editing) {
     initial: S.hero,
     editing,
     sfx,
+    onRestore: () => restoreFromCode(),
     onDone: hero => {
       const first = !S.hero;
       S.hero = hero;

@@ -137,6 +137,14 @@ WarioWare-style microgames back to back: a one-line command, a fuse of about 5 s
 
 The microgames come in themed sets: Retro Remix (quick-fire takes on classic video game challenges), Gross-Out (plunge the toilet, pick the nose...), Cabin Life, Magical, Sporty, Silly, Wordy, and **Funtendo**: 100+ parodies of classic Nintendo moments (Mario, Tetris, Dr. Mario, Zelda, Kirby, Metroid, Pokémon with lots of Ditto and Eevee, Animal Crossing, Duck Hunt, Punch-Out!!, Smash and more), a few with a magical-girl twist, and four bosses of their own. Each one is a small object in `js/micro/` with a `setup(api)` that builds it and a `solve(bot)` that plays it. `node tools/test_micros.mjs` (with the dev server running) plays every microgame through its own `solve()` at normal and double speed, so each one is proven winnable. The shared engine, helpers and test bot are in `js/micro/kit.js`.
 
+## Your save
+
+The game saves to the browser on your phone, and (when the Node server is running) also backs up to the server a few seconds after every change. Tap **☁** in the top bar to see your **save code**, five easy words like `moon-quilt-cocoa-fern-42`. On a new phone, after deleting the home-screen app, or in a different browser, tap **Restore my save** on the first screen (or ☁ → Restore from code) and type it in. The server keeps your latest save plus up to 8 hourly older versions to choose from. You can also download a backup file and restore from it, and the phone keeps up to 5 rolling local backups. A save that can't be read is never overwritten; it's set aside so it can be recovered.
+
+Good to know on iPhone: the home-screen app and Safari keep separate saves, and removing the app from the home screen deletes its data. The save code is how you carry your game across.
+
+Cloud saves live in `DATA_DIR/saves/<code>.json` on the server (the same `data` folder as the leaderboard).
+
 ## Running it
 
 The game is static files. The leaderboard needs the small Node server in `server/` (no dependencies), which also serves the game:

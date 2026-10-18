@@ -5,7 +5,7 @@ import { $, h } from './ui.js';
 const PW = 34, PH = 36;
 
 // Builds the creator into #scr-create. Calls onDone(hero) when confirmed.
-export function mountCreator({ initial, editing = false, onDone, onCancel, sfx }) {
+export function mountCreator({ initial, editing = false, onDone, onCancel, onRestore, sfx }) {
   const root = $('#scr-create');
   let hero = { ...(initial || defaultHero('girl')) };
   let raf = 0;
@@ -70,7 +70,7 @@ export function mountCreator({ initial, editing = false, onDone, onCancel, sfx }
     h('div', { class: 'create-foot' },
       editing
         ? h('button', { class: 'btn', onclick: () => { cancelAnimationFrame(raf); onCancel && onCancel(); } }, 'Cancel')
-        : null,
+        : onRestore && h('button', { class: 'btn', onclick: onRestore }, 'Restore my save'),
       h('button', { class: 'btn', onclick: () => { hero = randomHero({ name: hero.name }); sfx('select'); render(); } }, 'Randomize'),
       start));
   render();
