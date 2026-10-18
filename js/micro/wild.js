@@ -220,7 +220,7 @@ export default [
       const { ctx, P } = cvs(api);
       const W = { x: 50, y: 82 };
       const mon = pic(MONSTER), girl = ico('girl' + rnd(10));
-      const s = api.expose({ mx: 50, my: 24, ang: -90, need: -90, P });
+      const s = api.expose({ mx: 50, my: 24, ang: -90 + Math.sin(0.7) * 65, need: -90, P });
       let hit = false, cool = 0, beam = 0, beamA = 0;
       tapper(api.stage, () => {
         if (hit || cool > 0) return;
@@ -857,7 +857,9 @@ export default [
       const { win, lose, sfx, speed, frame } = api;
       const { ctx } = cvs(api);
       const w = (rnd(2) ? 1 : -1) * (4 + Math.random() * 9), bull = { x: 50, y: 42 }, aim = { x: 50 - w, y: 42 }, om = 2.2 * speed;
-      const s = api.expose({ cx: aim.x, cy: aim.y, w, bull });
+      // the sight starts away from the winning spot and sweeps through it twice a loop
+      const PH = 1.3;
+      const s = api.expose({ cx: aim.x + 20 * Math.sin(PH), cy: aim.y + 12 * Math.sin(2 * PH), w, bull });
       let arrows = 2;
       const hits = [];
       tapper(api.stage, () => {
@@ -869,7 +871,7 @@ export default [
         else { sfx('land'); if (arrows === 0) lose(); }
       });
       frame((dt, t) => {
-        s.cx = aim.x + 20 * Math.sin(om * t); s.cy = aim.y + 12 * Math.sin(2 * om * t);
+        s.cx = aim.x + 20 * Math.sin(om * t + PH); s.cy = aim.y + 12 * Math.sin(2 * (om * t + PH));
         bands(ctx, ['#9fd3f2', '#bfe6ff', '#c8ecb0', '#a8d870']);
         rect(ctx, 49, 60, 2, 30, '#6b3d22');
         [[19, '#fff4e0'], [15, '#1a1220'], [11, '#4f8fd0'], [7, '#d0463c'], [4, '#ffe27a']].forEach(([r, c]) => disc(ctx, bull.x, bull.y, r, c));
