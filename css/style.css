@@ -912,3 +912,6 @@ body.jp-shake #app, body.jp-shake .app { animation: shake .12s infinite; }
 @keyframes rbArc { from { transform: scale(.2); opacity: 1; } to { transform: scale(14); opacity: 0; } }
 @keyframes rbFall { from { transform: translateY(0) rotate(0); opacity: 1; } to { transform: translateY(110vh) rotate(360deg); opacity: .2; } }
 @media (prefers-reduced-motion: reduce) { .rainbow-fx { display: none; } }
+
+/* new release ready */
+.update-bar { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 70; border: 0; padding: 10px 16px; font: inherit; font-size: 20px; background: #c8792e; color: var(--ink); box-shadow: 0 3px 0 #6a3e14; cursor: pointer; max-width: calc(100vw - 32px); }

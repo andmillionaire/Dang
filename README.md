@@ -175,11 +175,11 @@ Auto-update every 15 minutes (User Scripts plugin):
 docker run --rm -v /mnt/user/appdata/dang/site:/git alpine/git pull --ff-only && docker restart dang
 ```
 
-Point the tunnel's public hostname at `http://192.168.1.116:8095` and turn Rocket Loader off. The server sends `no-cache` for `index.html`, `sw.js` and the manifest so updates roll out promptly, refuses paths under `.git`, `server`, `data` and `deploy`, validates and rate-limits score posts, and keeps scores in `data/leaderboard.json`. `deploy/nginx.conf` remains for static-only hosting.
+Point the tunnel's public hostname at `http://192.168.1.116:8095` and turn Rocket Loader off. The server sends `no-cache` for everything but images so updates roll out promptly (in Cloudflare, set Caching → Configuration → Browser Cache TTL to *Respect Existing Headers*; the app copes either way), refuses paths under `.git`, `server`, `data` and `deploy`, validates and rate-limits score posts, and keeps scores in `data/leaderboard.json`. `deploy/nginx.conf` remains for static-only hosting.
 
 ### Install as an app
 
-Open the HTTPS site on a phone: tap **Install** (Android/Chrome) or Share → *Add to Home Screen* (iOS). It works offline after the first load; bump `VERSION` in `sw.js` when app files change.
+Open the HTTPS site on a phone: tap **Install** (Android/Chrome) or Share → *Add to Home Screen* (iOS). It works offline after the first load; bump `VERSION` in `sw.js` and `js/version.js` when app files change. The service worker fills each new version's cache straight from the server, the app checks for a release whenever it comes to the front and offers a one-tap reload, and if it ever finds the server on a different version from the one running (a stuck cache), it clears its caches and reloads itself. Saves are never touched.
 
 ## Code map
 

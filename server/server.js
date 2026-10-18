@@ -172,7 +172,8 @@ function serveStatic(req, res, urlPath) {
   fs.stat(file, (err, st) => {
     const target = !err && st.isFile() ? file : path.join(ROOT, 'index.html');
     const ext = path.extname(target);
-    const fresh = target.endsWith('index.html') || target.endsWith('sw.js') || ext === '.webmanifest';
+    // everything but images revalidates every time, so a release shows up right away
+    const fresh = ext !== '.png';
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
       'Cache-Control': fresh ? 'no-cache' : ext === '.png' ? 'public, max-age=604800' : 'public, max-age=300',

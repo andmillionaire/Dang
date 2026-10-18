@@ -565,7 +565,33 @@ $('#installBtn').addEventListener('click', async () => {
 addEventListener('appinstalled', () => ($('#installBtn').hidden = true));
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // Look for a new release on launch, whenever the app comes back to the front, and every
+  // half hour. When one has installed, offer a reload (never mid-game on its own).
+  const hadController = !!navigator.serviceWorker.controller;
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    const check = () => reg.update().catch(() => {});
+    addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+    setInterval(check, 30 * 60 * 1000);
+  }).catch(() => {}));
+  // Self-heal: if the server has a different version from the one running (a stuck cache), clear
+  // the app's caches and service worker and load fresh. Saves live in localStorage and aren't touched.
+  addEventListener('load', async () => {
+    try {
+      const txt = await (await fetch(`js/version.js?fresh=${Date.now()}`, { cache: 'no-store' })).text();
+      const live = (txt.match(/VERSION = '([^']+)'/) || [])[1];
+      if (!live || live === VERSION || sessionStorage.getItem('dang-healed') === live) return;
+      sessionStorage.setItem('dang-healed', live);
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+      await Promise.all((await caches.keys()).map(k => caches.delete(k)));
+      location.reload();
+    } catch { /* offline: carry on with what we have */ }
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || document.getElementById('updateBar')) return;
+    const bar = h('button', { id: 'updateBar', class: 'update-bar', onclick: () => location.reload() }, '✨ A new version is ready · tap to update');
+    document.body.append(bar);
+  });
 }
 
 // ---------- boot ----------
