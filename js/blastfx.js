@@ -5,7 +5,7 @@ import { ICONS } from './sprites.js';
 // its blast in its own way and knocks tiles out as it hits them:
 //   cw    letters rain down from the sky and smash into the tiles
 //   pegs  a pinball is shot into the board and ricochets from tile to tile
-//   ttt   giant X and O marks stamp down along the row and column
+//   ttt   storm clouds roll along the row and column and strike them with lightning
 //   mew   cats pounce from tile to tile
 //   micro lightning bolts and flying microgame props
 // A mashup runs both kinds at once; two of a kind (supercharged) floods the whole board.
@@ -131,27 +131,27 @@ async function pinball(board, g, cells, at, pace) {
   await Promise.all(pops);
 }
 
-// ---------- Tic-Tac-Toe: X and O marks stamp down ----------
+// ---------- Storm Sweeper: storm clouds roll out along the row and column and strike ----------
 async function stamps(board, g, cells, at, pace) {
   const order = cells.slice().sort((a, b) => Math.abs(a.r - at.r) + Math.abs(a.c - at.c) - (Math.abs(b.r - at.r) + Math.abs(b.c - at.c)));
   const jobs = order.map(async (p, i) => {
-    await sleep(i * 32 * pace);
-    const mark = (p.r + p.c) % 2 ? 'X' : 'O';
+    await sleep(i * 34 * pace);
     const x = g.cx(p.c), y = g.cy(p.r);
-    let s = 3, a = 0;
+    let a = 0, bolt = 0;
     const done = actor(board, ctx => {
       ctx.globalAlpha = a;
-      ctx.strokeStyle = mark === 'X' ? '#ffe27a' : '#9fd3f2';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      if (mark === 'X') { ctx.moveTo(x - 5 * s, y - 5 * s); ctx.lineTo(x + 5 * s, y + 5 * s); ctx.moveTo(x + 5 * s, y - 5 * s); ctx.lineTo(x - 5 * s, y + 5 * s); }
-      else ctx.arc(x, y, 5 * s, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.fillStyle = '#6e6878'; ctx.fillRect(x - 6, y - 12, 12, 4); ctx.fillRect(x - 4, y - 14, 8, 2);
+      ctx.fillStyle = '#9a94a8'; ctx.fillRect(x - 5, y - 13, 6, 2);
+      if (bolt) {
+        ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x - 2, y - 3); ctx.lineTo(x + 2, y - 2); ctx.lineTo(x, y + 3); ctx.stroke();
+      }
     });
-    await tween(170, t => { s = 3 - 2 * ease.inQuad(t); a = Math.min(1, t * 2); });
-    board.hooks.sfx(mark === 'X' ? 'place' : 'aiplace');
+    await tween(140, t => { a = t; });
+    bolt = 1;
+    board.hooks.sfx(i % 3 ? 'pop' : 'thunder');
     board.shake = Math.max(board.shake, 2);
-    const pop = hit(board, p, mark === 'X' ? '#ffe27a' : '#9fd3f2', 8);
+    const pop = hit(board, p, '#ffe27a', 8);
     await tween(160, t => { a = 1 - t; });
     done();
     await pop;

@@ -33,10 +33,10 @@ export const PLANTERS = [
 
 // Crafted in the Pantry, used before a mini-game. `games` lists the mini-games (or mashups) it helps.
 export const BOOSTS = {
-  tea:     { name: 'Catnip Tea',    need: { flowers: 2, wheat: 1 }, effect: '+1 heart', games: ['mew', 'cw+mew', 'micro', 'micro+mew', 'micro+cw', 'micro+pegs'] },
+  tea:     { name: 'Catnip Tea',    need: { flowers: 2, wheat: 1 }, effect: '+1 heart', games: ['mew', 'cw+mew', 'micro', 'micro+mew', 'micro+cw', 'micro+pegs', 'ttt', 'mew+ttt', 'micro+ttt', 'pegs+ttt'] },
   snack:   { name: 'Pumpkin Snack', need: { pumpkin: 1 }, effect: '+2 balls (+1 heart in Peg Rush)', games: ['pegs', 'pegs+ttt', 'mew+pegs', 'cw+pegs', 'micro+pegs'] },
-  toast:   { name: 'Honey Toast',   need: { wheat: 3 }, effect: '+30s in Word Search, or a bigger letter tray in Word-Tac-Toe', games: ['cw', 'cw+ttt'] },
-  scarf:   { name: 'Cozy Scarf',    need: { cotton: 3 }, effect: 'The storm gets sleepy', games: ['ttt', 'pegs+ttt', 'mew+ttt', 'cw+ttt', 'micro+ttt'] },
+  toast:   { name: 'Honey Toast',   need: { wheat: 3 }, effect: '+30s in Word Search or Storm Sweeper, or extra digs in Word Sweeper', games: ['cw', 'ttt', 'cw+ttt'] },
+  scarf:   { name: 'Cozy Scarf',    need: { cotton: 3 }, effect: 'Flags two lightning clouds for you in Storm Sweeper', games: ['ttt'] },
   jam:     { name: 'Rainbow Jam',   need: { wheat: 1, cotton: 1, flowers: 1, pumpkin: 1 }, effect: 'A second chance if you lose', games: ['*'] },
 };
 
@@ -75,7 +75,7 @@ export const WARDROBE = [
   { id: 'heart',     slot: 'brooch', name: 'Heart Brooch',            rarity: 'rare',      cost: 6,  perk: 'Mini-games are a little easier' },
   { id: 'wand',      slot: 'held',   name: 'Star Wand',               rarity: 'rare',      cost: 8,  perk: 'Hints find your biggest match, sooner' },
   { id: 'ringtiara', slot: 'head',   name: 'Saturn Ring Tiara',       rarity: 'legendary', cost: 12, unlock: { miniWins: 10 },  perk: 'Every blast reaches further' },
-  { id: 'violet',    slot: 'outfit', name: 'Saturn Guardian Uniform', rarity: 'legendary', cost: 15, unlock: { day: 7 },        perk: '+3 moves, and tic-tac-toe ties count as wins' },
+  { id: 'violet',    slot: 'outfit', name: 'Saturn Guardian Uniform', rarity: 'legendary', cost: 15, unlock: { day: 7 },        perk: '+3 moves, and an extra heart in every Sweeper game' },
   { id: 'crystal',   slot: 'brooch', name: 'Saturn Crystal',          rarity: 'legendary', cost: 15, unlock: { threeStars: 5 }, perk: 'Lose a mini-game? Retry it, once per level' },
   { id: 'glaive',    slot: 'held',   name: 'Saturn Glaive',           rarity: 'legendary', cost: 20, unlock: { blasts: 20 },    perk: 'Once per level, a charged tile blasts with no mini-game' },
 ];

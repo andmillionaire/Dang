@@ -118,7 +118,7 @@ export function perks() {
     scoreMult: (has('tiara') ? 1.1 : 1) * (full ? 1.25 : 1),
     extraMoves: (has('sailor') ? 2 : 0) + (has('violet') ? 3 : 0),
     bigBlasts: has('ringtiara'),
-    tieWins: has('violet'),
+    sweeperHeart: has('violet'),
     glaive: has('glaive'),
     retry: has('crystal'),
     easier: has('heart') ? 0.15 : 0,

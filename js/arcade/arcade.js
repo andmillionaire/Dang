@@ -18,7 +18,6 @@ const tierName = n => TIERS[sizeOf(n)];
 export const hintCost = n => (sizeOf(n) >= 8 ? 10 : 5);
 const reward = n => 2 + Math.floor(n / 10);
 
-const SOON = [['Tic-Tac-Toe', 'sp_ttt']];
 
 // The arcade cabinet: pick a cartridge. Magical Mewdoku (100 levels) or DANG! Micro Mayhem.
 export function mountArcade({ sfx, changed, onExit }) {
@@ -64,9 +63,7 @@ export function mountArcade({ sfx, changed, onExit }) {
               disabled: locked,
               onclick: () => play(n),
             }, h('span', {}, locked ? '·' : n), best && h('span', { class: 'mini-stars' }, '★'.repeat(best.stars)));
-          })))),
-        h('div', { class: 'soon' }, h('p', { class: 'slot-label' }, 'Coming soon to this cabinet'),
-          SOON.map(([name, ic]) => h('span', { class: 'chip-soon' }, icon(ic), name)))));
+          }))))));
   }
 
   // ---------- play ----------

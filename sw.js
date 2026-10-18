@@ -1,5 +1,5 @@
 // Offline-first service worker. Bump VERSION whenever app files change.
-const VERSION = 'dang-0.14.0'; // keep in step with js/version.js
+const VERSION = 'dang-0.15.0'; // keep in step with js/version.js
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/arcade/arcade.js',
@@ -34,18 +34,17 @@ const SHELL = [
   'js/micro/kit.js',
   'js/micro/wild.js',
   'js/minigames/catsnap.js',
-  'js/minigames/cattactoe.js',
+  'js/minigames/catsweeper.js',
   'js/minigames/common.js',
   'js/minigames/index.js',
   'js/minigames/mewdoku.js',
   'js/minigames/micro.js',
-  'js/minigames/microtac.js',
   'js/minigames/peggle.js',
-  'js/minigames/tictactoe.js',
+  'js/minigames/sweeper.js',
   'js/minigames/words.js',
   'js/minigames/words3.js',
   'js/minigames/wordsearch.js',
-  'js/minigames/wordtactoe.js',
+  'js/minigames/wordsweeper.js',
   'js/pantry.js',
   'js/pegs/engine.js',
   'js/pegs/levels.js',

@@ -486,18 +486,18 @@ export const BALL_ROWS = ['.ww.', 'wwww', 'wwws', '.ss.'];
 
 // ---------- charged tiles (12x12), one per match shape ----------
 export const SPECIAL_ROWS = {
-  ttt: [
+  ttt: [ // Storm Sweeper: a storm cloud with a lightning bolt
     'kkkkkkkkkkkk',
-    'kwDwyDDyDDDk',
-    'kDwDyDDyDuDk',
-    'kwDwyDDyDDDk',
-    'kyyyyyyyyyyk',
-    'kDDDyuuyDDDk',
-    'kDDDyuuyDDDk',
-    'kyyyyyyyyyyk',
-    'kDDDyDDywDwk',
-    'kDuDyDDyDwDk',
-    'kDDDyDDywDwk',
+    'kDDDDDDDDDDk',
+    'kDDDsswDDDDk',
+    'kDDsswwwsDDk',
+    'kDsswwwwwsDk',
+    'kDssssssssDk',
+    'kDDDDyyDDDDk',
+    'kDDDyyDDDDDk',
+    'kDDyyyyyDDDk',
+    'kDDDDyyDDDDk',
+    'kDDDyyDDDDDk',
     'kkkkkkkkkkkk',
   ],
   pegs: [

@@ -25,15 +25,17 @@ Turn between the attic's four walls (◀ ▶ or swipe), each with four planter s
 | 3 | Raised bed | 3 | 4 lumber, 1 fabric, 45 coins |
 | 4 | Greenhouse bed | 4, and crops grow a night faster | 6 lumber, 2 fabric, 90 coins |
 
-The **Pantry** sells crops for coins (wheat 3, cotton 5, flowers 8, pumpkin 14) and crafts them into mini-game boosts: Catnip Tea (+1 heart), Pumpkin Snack (+2 balls), Honey Toast (+30 s in Word Search, or a bigger letter tray in Word-Tac-Toe), Cozy Scarf (the storm plays worse) and Rainbow Jam (a second chance). When a charged tile starts a mini-game you're offered the boosts that fit it. Prices and recipes live in `js/data.js`.
+The **Pantry** sells crops for coins (wheat 3, cotton 5, flowers 8, pumpkin 14) and crafts them into mini-game boosts: Catnip Tea (+1 heart), Pumpkin Snack (+2 balls), Honey Toast (+30 s in Word Search or Storm Sweeper, extra digs in Word Sweeper), Cozy Scarf (flags two lightning clouds in Storm Sweeper) and Rainbow Jam (a second chance). When a charged tile starts a mini-game you're offered the boosts that fit it. Prices and recipes live in `js/data.js`.
 
 ## Charged tiles and mini-games
+
+Every mini-game is solo and skill-based: no bot opponents.
 
 Bigger match shapes leave a charged tile on the board. A charged tile on its own does nothing: **swap two together** and the board morphs into a mini-game. Two of the same kind play a *Supercharged* version with a double-size blast; two different kinds play a **mashup**. Win and both tiles blast; lose and they fizzle. A charged tile can slide one square in any direction (it costs a move), so you can steer two together.
 
 | Shape | Tile / game | Blast |
 | --- | --- | --- |
-| 4 in a row | Tic-Tac-Toe | its row and column |
+| 4 in a row | Storm Sweeper (Minesweeper under rain clouds) | lightning down its row and column |
 | 5 in a row | Star Pegs (Peggle-style) | every tile of the most common colour |
 | L, T or + | Mewdoku (cat region puzzle) | 5×5 area |
 | 2×2 box | Word Search (find the hidden words against the clock) | letters rain down both diagonals |
@@ -43,7 +45,7 @@ You start small and the game opens up as you go:
 
 | Level | Board | New |
 | --- | --- | --- |
-| 1 | 6×6, 4 colours | 4 in a row → Tic-Tac-Toe |
+| 1 | 6×6, 4 colours | 4 in a row → Storm Sweeper |
 | 2 | 6×7 | Star Bomb (magic) |
 | 3 | 7×7, 5 colours | L / T / + → Mewdoku, first merge required, mashups possible |
 | 4 | 7×8 | 2×2 box → Word Search |
@@ -58,18 +60,22 @@ Mashups are fused games, not reskins:
 
 | Mashup | How it plays |
 | --- | --- |
-| Peg-Tac-Toe | Drop balls Plinko-style. The 9 bins at the bottom are the tic-tac-toe squares; where the ball lands is where your ✕ goes. |
-| Cat-Tac-Toe | A duel on a Mewdoku board: you and the storm take turns placing cats, and every cat must obey Mewdoku rules against all of them. Whoever runs out of legal squares loses. |
-| Word-Tac-Toe | Place letters from your tray on the 3×3 grid. The first to make a real 3-letter word along any line wins. |
+| Peg Sweeper | Star Pegs where some plain pegs are hidden storm clouds (hitting one costs a ball) and number pegs count the clouds nearby. Read the numbers and aim around the storm. |
+| Cat Sweeper | A Mewdoku with no colours: one cat per row and column, no touching, and number squares say how many cats touch them. Just enough numbers for one answer. |
+| Word Sweeper | Three words are buried under clouds. Each dig shows a letter, or a number counting the buried letters around it. Dig up every word before you run out of digs. |
 | Cat Pegs | A Mewdoku grid sits under the bins. Pick a row, shoot, and the bin the ball lands in picks the column for your cat. |
 | Letter Pegs | Hit the letter pegs in spelling order to answer a clue. Hitting the wrong letters costs a ball. |
-| Micro-Tac-Toe | Every square hides a microgame. Win it and your ✕ goes there; lose and the storm steals the square. |
+| Micro Sweeper | A small Storm Sweeper at WarioWare speed: every dig has to land within a 3-second fuse. |
 | Peg Rush | Every shot comes with an order ("Hit 2 orange!", "Catch it!", "Blue only!") and 5 seconds to fire. |
 | Cat Snap | Mewdoku against the fuse: a row lights up and you have 5 seconds to tap where its cat goes. |
 | Word Rush | Rapid 5-second word microgames: unscramble, fill the gap, spot the real word, answer the clue, type it out. |
 | Word Mewdoku | Each colour has a letter. Read top to bottom, the cats spell the clue's answer, so solving the clue tells you which colour each row's cat is in. |
 
 Chain reactions call out **Dang!**, then Lovely!, Magical!, Spellbinding!. Every level needs points **and** blasts, so some days the storm just wins.
+
+## Storm Sweeper
+
+Minesweeper under rain clouds. Some clouds hide lightning; numbers count the lightning clouds touching each square. Tap to clear, long-press (or switch to flag mode) to flag. Your first tap is always safe, and every board is generated so it can be cleared with logic alone, with no 50/50 guesses. Boards grow from 6×6 with 5 bolts to 8×8 with 11, against a fuse. Catnip Tea adds a heart, Honey Toast adds time, the Cozy Scarf pre-flags two bolts, and the Saturn Guardian Uniform gives an extra heart in every Sweeper game.
 
 ## Magic tiles
 
@@ -85,7 +91,7 @@ Swap two magic tiles together for a giant combo: Star + Star is a **Supernova** 
 
 ## Blasts and treasure
 
-Winning a mini-game doesn't just pop tiles; each kind delivers its blast its own way. Word Search rains letters from the sky that smash into the board, Star Pegs fires a pinball that ricochets from tile to tile, Tic-Tac-Toe stamps giant X and O marks down the row and column, Mewdoku sends cats pouncing across the area, and Micro Rush calls down lightning and flings microgame props. Mashups run both at once (`js/blastfx.js`).
+Winning a mini-game doesn't just pop tiles; each kind delivers its blast its own way. Word Search rains letters from the sky that smash into the board, Star Pegs fires a pinball that ricochets from tile to tile, Storm Sweeper rolls storm clouds down the row and column and strikes them with lightning, Mewdoku sends cats pouncing across the area, and Micro Rush calls down lightning and flings microgame props. Mashups run both at once (`js/blastfx.js`).
 
 About once every 200 refills a **treasure chest** drops in with the new tiles. It never matches and blasts can't break it; clear the tiles beneath it to bring it down. When it reaches the bottom row it bursts in a fountain of coins and gives coins, lumber, fabric, seeds and sometimes a planter kit, then hands you a bonus Plinko ball. Drag to aim and drop it into a prize chute. The slim gold chute in the middle (about a 1 in 17 shot) is the **Saturn Jackpot**: 1000 coins, 25 star shards, a stack of materials and seeds, and a screen that goes completely wild.
 
@@ -174,7 +180,7 @@ Open the HTTPS site on a phone: tap **Install** (Android/Chrome) or Share → *A
 | `js/main.js` | Screens and the day/night loop, rewards, decorating, install prompt |
 | `js/match3.js` | Board: matching (lines, L/T, 2×2 boxes), charged tiles, mashups, blasts, cascades |
 | `js/blastfx.js`, `js/treasure.js`, `js/plinko.js` | Themed blast effects, the treasure chest's loot and Plinko bonus (physics kept pure so the odds can be tested) |
-| `js/minigames/` | Tic-Tac-Toe, Star Pegs (+ Peg-Tac-Toe, Letter Pegs, Cat Pegs), Mewdoku (+ Word Mewdoku), Word Search, Cat-Tac-Toe, Word-Tac-Toe, Micro Rush (+ Word Rush), Micro-Tac-Toe, Cat Snap; `index.js` maps tiles and pairs to games |
+| `js/minigames/` | Storm Sweeper (+ Micro Sweeper), Peg/Letter/Cat Pegs, Peg Sweeper, Mewdoku (+ Word Mewdoku), Word Search, Cat Sweeper, Word Sweeper, Micro Rush (+ Word Rush), Cat Snap; `index.js` maps tiles and pairs to games |
 | `js/meowdoku-engine.js`, `js/meowdokuboard.js` | Mewdoku generator, uniqueness and logic solvers, and the playable board |
 | `js/arcade/` | The cabinet: Magical Mewdoku (pre-generated levels) and Micro Mayhem |
 | `js/micro/` | The arcade's microgames by theme, plus `kit.js` (engine, helpers, test bot) |

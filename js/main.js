@@ -224,7 +224,7 @@ function introduce(n, cfg) {
       body: h('div', { class: 'howto' },
         h('p', {}, 'Swap neighbouring tiles to line up ', h('b', {}, '3 or more'), '.'),
         h('p', {}, 'Line up ', h('b', {}, '4 in a row'), ' and one tile stays behind as a ', icon('sp_ttt'), h('b', {}, ' charged tile'), '.'),
-        h('p', {}, 'Make two and ', h('b', {}, 'swap them together'), ': the board morphs into a tic-tac-toe game against the storm. Win and they ', h('b', {}, 'blast'), ' everything around them.'),
+        h('p', {}, 'Make two and ', h('b', {}, 'swap them together'), ': the board morphs into Storm Sweeper. Win and they ', h('b', {}, 'blast'), ' everything around them.'),
         h('p', {}, 'A charged tile can slide one square in any direction, so you can bring two together.'),
         h('p', {}, cfg.blasts ? `This level needs ${cfg.target} points and ${cfg.blasts} blast.` : `This first level just needs ${cfg.target} points. Have fun!`)),
       buttons: [{ label: 'Got it', cls: 'primary' }],
@@ -299,9 +299,7 @@ async function runSpecial(b, kinds) {
   const box = $('#morph');
   box.hidden = false;
   const playOnce = async () => {
-    let r = await game.play({ root: box, difficulty: b.cfg.difficulty, sfx, boost });
-    if (r === 'draw' && p.tieWins) { toast('Saturn Guardian: a tie counts as a win!'); r = 'win'; }
-    return r;
+    return game.play({ root: box, difficulty: b.cfg.difficulty, sfx, boost, extraHeart: p.sweeperHeart });
   };
   let res = await playOnce();
   if (res !== 'win' && p.retry && !run.retryUsed) {

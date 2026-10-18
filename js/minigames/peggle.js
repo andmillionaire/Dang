@@ -3,7 +3,6 @@ import { fitCanvas, toLogical, sleep } from '../pixel.js';
 import { PEGS, BALL, CATS } from '../sprites.js';
 import { mount, banner } from './common.js';
 import { drawBucket } from '../pegs/engine.js';
-import { aiMove, outcome, stormSkill } from './tictactoe.js';
 import { WORDS } from './words.js';
 import { POOL } from '../arcade/meowdoku-levels.js';
 import { decode, REGION_COLORS } from '../meowdokuboard.js';
@@ -39,14 +38,15 @@ const clearAround = (pegs, special, gap) => pegs.filter(p => special.every(s => 
 
 // Star Pegs and the three pegs mashups:
 //  'pegs' Star Pegs: clear every orange peg; a moving bucket gives free balls.
-//  'ttt'  Peg-Tac-Toe: 9 bins along the bottom are the 9 squares; where the ball lands is where your X goes.
+//  'sweep' Peg Sweeper: some ordinary-looking pegs are hidden storm clouds (hitting one costs a ball);
+//         number pegs say how many clouds are near them, so read them and aim around the storm.
 //  'word' Letter Pegs: hit the letters in spelling order to answer the clue.
 //  'cats' Cat Pegs: a Mewdoku board under 5 bins; tap a row, then land the ball in the right column.
 //  'rush' Peg Rush: every shot is a WarioWare-style order ("Hit 2 orange!") with 5 seconds to fire.
 export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
   const TITLES = {
     pegs: ['Star Pegs', 'Drag to aim, let go to shoot. Clear every orange peg.'],
-    ttt: ['Peg-Tac-Toe', 'The 9 bins are the 9 squares. Where your ball lands, your X goes. Get three in a row before the storm!'],
+    sweep: ['Peg Sweeper', 'Clear the orange pegs, but some plain pegs hide storm clouds: hitting one costs a ball. Numbers count the clouds near them.'],
     word: ['Letter Pegs', 'Hit the letters in spelling order to answer the clue. Wrong letters cost a ball.'],
     cats: ['Cat Pegs', 'Tap a row of the board, then shoot: the bin your ball lands in is the column your cat goes in. Mewdoku rules!'],
     rush: ['Peg Rush', 'Every shot comes with an order. Read it, aim, and fire within 5 seconds. Miss the order and you lose a heart.'],
@@ -57,14 +57,17 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
   ui.body.append(h('div', { class: 'mg-canvas' + (mode === 'cats' ? ' tall' : '') }, canvas));
 
   let balls = 6 - Math.round(d * 2) + (boost === 'snack' ? 2 : 0);
-  const skill = stormSkill(d, boost);
   let pegs, board = null, word = null, bins = 0, md = null;
   const BIN_Y = mode === 'cats' ? 128 : 140; // top of the bins
-  if (mode === 'ttt') {
-    pegs = scatter(BIN_Y - 14);
-    board = Array(9).fill(null);
-    bins = 9;
-    balls += 3;
+  if (mode === 'sweep') {
+    pegs = scatter(130);
+    shuffle(pegs.slice()).slice(0, Math.min(5 + Math.round(d * 3), pegs.length >> 2)).forEach(p => (p.kind = 'orange'));
+    // hide storm clouds among the plain pegs, then let some plain pegs count the clouds near them
+    const plain = shuffle(pegs.filter(p => p.kind === 'blue'));
+    plain.slice(0, 6 + Math.round(d * 4)).forEach(p => (p.kind = 'cloud'));
+    const near = q => pegs.filter(c => c.kind === 'cloud' && Math.hypot(c.x - q.x, c.y - q.y) < 22).length;
+    plain.slice(6 + Math.round(d * 4)).forEach((p, i) => { if (i % 2 === 0) { p.num = near(p); } });
+    balls += 3 + (boost === 'tea' ? 1 : 0);
   } else if (mode === 'cats') {
     pegs = scatter(BIN_Y - 14);
     bins = 5;
@@ -113,9 +116,6 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
   if (rush) rush.lives = rush.max;
   let shotOrange = 0;
 
-  // the tic-tac-toe board, shown above the canvas for Peg-Tac-Toe
-  const tttCells = mode === 'ttt' ? Array.from({ length: 9 }, (_, i) => h('span', { class: 'pt-cell' }, String(i + 1))) : null;
-  if (tttCells) ui.body.prepend(h('div', { class: 'pt-board' }, tttCells));
   if (mode === 'word') ui.body.prepend(h('p', { class: 'cw-clue' }, h('b', {}, 'Clue: '), word.clue));
 
   function newOrder() {
@@ -135,7 +135,6 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
       h('span', { class: 'mg-stat' }, `${rush.passed} / ${rush.need} orders`), rush.order && h('span', { class: 'mg-stat order' }, rush.order.text));
     if (mode === 'cats') stats.unshift(h('span', { class: 'mg-stat' }, Array.from({ length: 3 + (boost === 'tea' ? 1 : 0) }, (_, i) => icon(i < md.hearts ? 'heart' : 'heartOff'))));
     ui.info.replaceChildren(...stats.filter(Boolean));
-    if (tttCells) board.forEach((m, i) => { tttCells[i].textContent = m === 'X' ? '✕' : m === 'O' ? '○' : String(i + 1); tttCells[i].className = 'pt-cell' + (m ? ' ' + m : ''); });
   }
   if (rush) newOrder();
   updateInfo();
@@ -186,6 +185,11 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
         balls = Math.max(0, balls - 1);
         ui.status(`“${p.ch}” isn’t in the answer. −1 ball`);
         sfx('nope');
+      } else if (p.kind === 'cloud') {
+        balls = Math.max(0, balls - 1);
+        callout = { text: 'Storm cloud! −1 ball', t: 0 };
+        ui.status('A storm cloud! Read the numbers and aim around them. −1 ball');
+        sfx('thunder');
       } else if (p.kind === 'letter') {
         if (p.ch !== nextLetter()) return false;
         word.got.push(p.ch);
@@ -198,7 +202,7 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
     }
 
     const binOf = x => Math.max(0, Math.min(bins - 1, Math.floor((x / LW) * bins)));
-    const binClosed = k => mode === 'ttt' && !!board[k];
+    const binClosed = () => false;
 
     function stepBall(b, collide) {
       for (let s = 0; s < SUB; s++) {
@@ -257,10 +261,10 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
     }
 
     function won() {
-      if (mode === 'pegs') return orangeLeft() === 0;
+      if (mode === 'pegs' || mode === 'sweep') return orangeLeft() === 0;
       if (mode === 'word') return word.got.length === word.word.length;
       if (mode === 'cats') return md.cats.length === 5;
-      return outcome(board)?.w === 'X';
+      return false;
     }
 
     async function endShot(how) {
@@ -269,11 +273,6 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
       if (rush) return rushEnd(rush.order.ok({ hits, orange: shotOrange, how }) ? '' : `Order missed: ${rush.order.text}`);
       if (how === 'bucket') {
         balls++; bucketFlash = 1; callout = { text: 'Free ball!', t: 0 }; sfx('coin'); ui.status('Caught in the bucket: free ball!');
-      } else if (how === 'bin' && mode === 'ttt') {
-        binFlash = { k: landed, t: 0 };
-        board[landed] = 'X';
-        sfx('place');
-        callout = { text: `Square ${landed + 1}!`, t: 0 };
       } else if (how === 'bin' && mode === 'cats') {
         binFlash = { k: landed, t: 0 };
         placeCat(md.rowShot, landed);
@@ -281,19 +280,8 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
         ui.status(hits ? `${hits} peg${hits > 1 ? 's' : ''} that shot.` : 'Missed everything!');
       }
       updateInfo();
-      if (won()) return finish('win', { pegs: 'Every orange peg is gone!', word: `You spelled ${word?.word}!`, cats: 'Every cat has its own patch!', ttt: 'Three in a row!' }[mode]);
+      if (won()) return finish('win', { pegs: 'Every orange peg is gone!', word: `You spelled ${word?.word}!`, cats: 'Every cat has its own patch!', sweep: 'Every orange cleared, storm dodged!' }[mode]);
       if (md && md.hearts <= 0) return finish('lose', 'Out of hearts.');
-      if (mode === 'ttt' && how === 'bin') {
-        if (outcome(board)) return finish('draw', 'The board filled up without a line.');
-        await sleep(350);
-        board[aiMove(board, skill)] = 'O';
-        sfx('aiplace');
-        updateInfo();
-        const o = outcome(board);
-        if (o && o.w === 'O') return finish('lose', 'The storm got three in a row.');
-        if (o) return finish('draw', 'A stalemate.');
-        ui.status('The storm took a square. Your shot!');
-      }
       if (balls <= 0) return finish('lose', 'Out of balls.');
     }
 
@@ -347,12 +335,6 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
 
     const bucketX = () => 60 + Math.sin(frame / 75) * 44;
 
-    function drawMark(m, x, y) {
-      ctx.fillStyle = m === 'X' ? '#ffe27a' : '#6a9ae0';
-      if (m === 'X') for (let k = -2; k <= 2; k++) { ctx.fillRect(x + k, y + k, 1, 1); ctx.fillRect(x + k, y - k, 1, 1); }
-      else { ctx.fillRect(x - 1, y - 2, 3, 1); ctx.fillRect(x - 1, y + 2, 3, 1); ctx.fillRect(x - 2, y - 1, 1, 3); ctx.fillRect(x + 2, y - 1, 1, 3); }
-    }
-
     function drawBins() {
       const w = LW / bins, hgt = md ? 10 : 16;
       for (let k = 0; k < bins; k++) {
@@ -361,10 +343,7 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
         ctx.fillStyle = flash ? `rgba(255,226,122,${0.3 + flash * 0.6})` : k % 2 ? '#24305a' : '#1e2850';
         ctx.fillRect(x, BIN_Y, cw, hgt);
         ctx.fillStyle = '#3a4a7a'; ctx.fillRect(x, BIN_Y - 3, 1, hgt + 3);
-        if (mode === 'ttt') {
-          if (board[k]) { ctx.fillStyle = '#6b3d22'; ctx.fillRect(x + 1, BIN_Y - 2, cw - 1, 3); drawMark(board[k], Math.round(x + w / 2), BIN_Y + 8); }
-          else { ctx.fillStyle = '#9fb4d0'; ctx.font = '7px "Jersey 10", monospace'; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), x + w / 2, BIN_Y + 9); }
-        } else if (md && md.row >= 0) {
+        if (md && md.row >= 0) {
           ctx.fillStyle = 'rgba(255,226,122,0.25)'; ctx.fillRect(x + 3, BIN_Y + 3, cw - 6, 4);
         }
       }
@@ -413,6 +392,13 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
           ctx.fillRect(p.x - 3, p.y - 3, 7, 7);
           ctx.fillStyle = '#6b3d22'; ctx.fillRect(p.x - 3, p.y + 3, 7, 1);
           ctx.fillStyle = '#1a1220'; ctx.fillText(p.ch, p.x + 0.5, p.y + 0.5);
+        } else if (p.kind === 'cloud' && p.lit) {
+          // a storm cloud that's been hit shows itself
+          ctx.fillStyle = '#6e6878'; ctx.fillRect(p.x - 3, p.y - 2, 7, 4); ctx.fillRect(p.x - 2, p.y - 3, 5, 6);
+          ctx.fillStyle = '#ffe27a'; ctx.fillRect(p.x, p.y - 1, 1, 2); ctx.fillRect(p.x - 1, p.y + 1, 1, 1);
+        } else if (p.num != null) {
+          ctx.fillStyle = p.lit ? '#bfe6ff' : '#f2e6c9'; ctx.fillRect(p.x - 3, p.y - 3, 7, 7);
+          ctx.fillStyle = '#1a1220'; ctx.fillText(String(p.num), p.x + 0.5, p.y + 0.5);
         } else {
           const orange = p.kind === 'orange';
           ctx.drawImage(orange ? (p.lit ? PEGS.orangeLit : PEGS.orange) : (p.lit ? PEGS.blueLit : PEGS.blue), p.x - 2, p.y - 2);
