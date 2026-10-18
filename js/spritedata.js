@@ -604,6 +604,38 @@ export const MAGIC_ROWS = {
   ],
 };
 
+// Marks drawn on top of a coloured tile: Star Bombs and Moon Beams keep their tile's colour.
+export const MAGIC_MARK_ROWS = {
+  star: [
+    '.......kkk..',
+    '......kkykk.',
+    '.....kkyyykk',
+    '.....kyywyyk',
+    '.....kkyyykk',
+    '......kykyk.',
+    '......kkkkk.',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+  ],
+  beam: [
+    '.......kkk..',
+    '.......kuk..',
+    '.....kkkukkk',
+    '.....kuuwuuk',
+    '.....kkkukkk',
+    '.......kuk..',
+    '.......kkk..',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+  ],
+};
+
 // Treasure chest tile (12x12): the rare drop you steer to the bottom of the board.
 export const CHEST_ROWS = [
   '..kkkkkkkk..',

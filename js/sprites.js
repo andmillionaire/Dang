@@ -1,4 +1,4 @@
-import { PAL, TILE_ROWS, CROP_ROWS, ICON_ROWS, ACCESSORY, CAT_ROWS, CAT_BREEDS, PEG_ROWS, BALL_ROWS, SPECIAL_ROWS, CHEST_ROWS, MAGIC_ROWS, GIRL_ROWS, GIRLS as GIRL_DEFS, PET_ROWS, PET_PAL } from './spritedata.js';
+import { PAL, TILE_ROWS, CROP_ROWS, ICON_ROWS, ACCESSORY, CAT_ROWS, CAT_BREEDS, PEG_ROWS, BALL_ROWS, SPECIAL_ROWS, CHEST_ROWS, MAGIC_ROWS, MAGIC_MARK_ROWS, GIRL_ROWS, GIRLS as GIRL_DEFS, PET_ROWS, PET_PAL } from './spritedata.js';
 export { TILE_COLORS } from './spritedata.js';
 
 export function build(rows, recolor) {
@@ -37,6 +37,16 @@ Object.entries(SPECIALS).forEach(([k, c]) => (ICONS['sp_' + k] = c));
 export const CHEST = build(CHEST_ROWS);
 export const MAGIC = mapObj(MAGIC_ROWS, rows => build(rows, ch => ({ D: '#24305a', P: '#3a2a5c' }[ch] || PAL[ch])));
 Object.entries(MAGIC).forEach(([k, c]) => (ICONS['mg_' + k] = c));
+export const MAGIC_MARK = mapObj(MAGIC_MARK_ROWS, build);
+// icons for the star and beam: the mark on a tile
+Object.entries(MAGIC_MARK).forEach(([k, m], i) => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 12;
+  const x = c.getContext('2d');
+  x.drawImage(TILES[i + 1], 0, 0);
+  x.drawImage(m, 0, 0);
+  ICONS['mg_' + k] = c;
+});
 ICONS.chest = CHEST;
 
 export const GIRLS = GIRL_DEFS.map(g => build(GIRL_ROWS[g.style], ch => ({ H: g.H, G: g.G, X: g.X, E: g.E, s: '#f7d4b8', m: '#d0463c' }[ch] || PAL[ch])));

@@ -108,8 +108,7 @@ export function levelConfig(n) {
     // Tuned with a bot: plain matching gets you about half to three-quarters of the way,
     // blasts make up the rest.
     target: [900, 1200, 1000, 1100, 1400][n - 1] || 1400 + (n - 5) * 200,
-    // Mini-games only start when two charged tiles merge, and each merge blasts both tiles,
-    // so these are counted in tiles: 2 = one merge.
+    // Counted in charged tiles blasted: one tap blasts one, a merge blasts two.
     blasts: n <= 2 ? 0 : n <= 9 ? 2 : 4,
     // 0..1, how hard the big-match mini-games are.
     difficulty: Math.min(1, (n - 1) / 12),

@@ -217,7 +217,7 @@ function startLevel(n) {
 // First level: the basics. Levels that unlock something open with a "New!" card.
 // Footer hint.
 function setTip() {
-  $('#mTip').replaceChildren(h('b', {}, 'Swap two charged tiles together'), ' to play a mini-game', board.cfg?.magic?.length ? '. Tap magic tiles to set them off.' : '.');
+  $('#mTip').replaceChildren(h('b', {}, 'Tap a charged tile'), ' to play its mini-game, or swap two together for a bigger blast', board.cfg?.magic?.length ? '. Match a Star Bomb like a normal tile to set it off.' : '.');
 }
 
 function introduce(n, cfg) {
@@ -229,8 +229,8 @@ function introduce(n, cfg) {
       body: h('div', { class: 'howto' },
         h('p', {}, 'Swap neighbouring tiles to line up ', h('b', {}, '3 or more'), '.'),
         h('p', {}, 'Line up ', h('b', {}, '4 in a row'), ' and one tile stays behind as a ', icon('sp_ttt'), h('b', {}, ' charged tile'), '.'),
-        h('p', {}, 'Make two and ', h('b', {}, 'swap them together'), ': the board morphs into Storm Sweeper. Win and they ', h('b', {}, 'blast'), ' everything around them.'),
-        h('p', {}, 'A charged tile can slide one square in any direction, so you can bring two together.'),
+        h('p', {}, h('b', {}, 'Tap it'), ': the board morphs into Storm Sweeper. Win and it ', h('b', {}, 'blasts'), ' everything around it.'),
+        h('p', {}, 'Got two side by side? ', h('b', {}, 'Swap them together'), ' for a supercharged blast.'),
         h('p', {}, cfg.blasts ? `This level needs ${cfg.target} points and ${cfg.blasts} blast.` : `This first level just needs ${cfg.target} points. Have fun!`)),
       buttons: [{ label: 'Got it', cls: 'primary' }],
     });
@@ -253,8 +253,8 @@ function introduce(n, cfg) {
       : h('div', { class: 'howto center' },
         h('p', { class: 'new-icon' }, icon('mg_' + u.magic, 'ico huge')),
         h('p', {}, h('b', {}, M.how), ' makes a ', h('b', {}, M.name), ', a magic tile.'),
-        h('p', {}, `Tap it, or swap it with any tile, and it ${M.does}. No mini-game needed.`),
-        h('p', {}, 'Swap two magic tiles together for a huge combo!')),
+        h('p', {}, u.magic === 'orb' ? `Swap it with any tile and it ${M.does}. No mini-game needed.` : `It keeps its tile’s colour. Match it like a normal tile and it ${M.does}. No mini-game needed.`),
+        h('p', {}, u.magic === 'star' ? 'Two Star Bombs side by side? Swap them together for a Rainbow Bomb that clears the whole board!' : 'Swap two magic tiles together for a huge combo!')),
     buttons: [{ label: 'Let’s go', cls: 'primary' }],
   });
   requestAnimationFrame(() => sparkle(document.querySelector('#modal .new-icon'), { count: 16 }));
@@ -263,7 +263,7 @@ function introduce(n, cfg) {
 const MAGIC_INFO = {
   star: { name: 'Star Bomb', how: 'Two matches from one swap, or a 3-step chain reaction,', does: 'blasts the 3×3 around it' },
   beam: { name: 'Moon Beam', how: '6 in a row, or a 4-step chain reaction,', does: 'fires moonbeams down its row and column' },
-  orb: { name: 'Saturn Orb', how: 'A 7-tile match, or a 5-step chain reaction,', does: 'zaps every tile of one colour' },
+  orb: { name: 'Saturn Orb', how: 'A 7-tile match, or a 5-step chain reaction,', does: 'zaps every tile of the colour you swap it with' },
 };
 
 // First time each kind of charged tile appears, say what it does.
@@ -272,7 +272,7 @@ function explainCharged(kind) {
   S.seen['sp_' + kind] = true;
   persist();
   const g = GAMES[kind];
-  toast(`${g.shape}: you made a ${g.name} tile! Make another and swap them together to play.`);
+  toast(`${g.shape}: you made a ${g.name} tile! Tap it to play, or make another and swap them together for a bigger blast.`);
 }
 
 function explainMagic(kind) {

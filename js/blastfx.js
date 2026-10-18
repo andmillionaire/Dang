@@ -273,6 +273,7 @@ export async function treasureFx(board, p) {
 export async function magicFx(board, kind, at, cells) {
   if (!cells.length) return;
   if (reduced()) return board.pop(cells, at);
+  if (kind === 'rainbow') return rainbow(board, at, cells);
   const g = board.geom();
   const x0 = g.cx(at.c), y0 = g.cy(at.r);
   const dist = p => Math.hypot(p.r - at.r, p.c - at.c);
@@ -341,6 +342,57 @@ export async function magicFx(board, kind, at, cells) {
     await sleep(step);
   }
   await tween(160, t => { ring = 30 + t * 20; zaps.forEach(z => (z.life *= 0.8)); });
+  done();
+  return Promise.all(pops);
+}
+
+// ---------- Rainbow Bomb (two Star Bombs): the whole screen floods with rainbows ----------
+const RAINBOW = ['#ff5a5a', '#f39a3a', '#ffe27a', '#8fe08a', '#7ec8f2', '#9a7ef2', '#f08ab0'];
+
+async function rainbow(board, at, cells) {
+  const g = board.geom();
+  const x0 = g.cx(at.c), y0 = g.cy(at.r);
+  // over the whole screen: a spinning rainbow wash, arcs and falling sparkles
+  const veil = document.createElement('div');
+  veil.className = 'rainbow-fx';
+  veil.append(Object.assign(document.createElement('div'), { className: 'rb-wash' }));
+  for (let i = 0; i < 3; i++) veil.append(Object.assign(document.createElement('div'), { className: 'rb-arc', style: `animation-delay:${i * 0.25}s` }));
+  for (let i = 0; i < 28; i++) {
+    const sp = document.createElement('i');
+    sp.className = 'rb-spark';
+    sp.style.cssText = `left:${Math.random() * 100}%;background:${RAINBOW[i % RAINBOW.length]};animation-delay:${Math.random() * 0.9}s;animation-duration:${0.9 + Math.random() * 0.8}s`;
+    veil.append(sp);
+  }
+  document.body.append(veil);
+  setTimeout(() => veil.remove(), 2600);
+  // on the board: rainbow rings ripple out and every tile bursts in the colour of its band
+  let ring = 0;
+  const done = actor(board, ctx => {
+    ctx.lineWidth = 2;
+    RAINBOW.forEach((col, i) => {
+      const r = ring - i * 3;
+      if (r <= 0) return;
+      ctx.strokeStyle = col;
+      ctx.globalAlpha = Math.max(0, 1 - ring / 160);
+      ctx.beginPath(); ctx.arc(x0, y0, r, 0, Math.PI * 2); ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+  });
+  board.hooks.sfx('sparkle');
+  const dist = p => Math.hypot(p.r - at.r, p.c - at.c);
+  const order = cells.slice().sort((a, b) => dist(a) - dist(b));
+  const pops = [];
+  let n = 0;
+  await tween(1100, t => {
+    ring = t * 160;
+    const reach = (ring / g.CELL) - 0.5;
+    while (n < order.length && dist(order[n]) <= reach) {
+      const p = order[n++];
+      pops.push(hit(board, p, RAINBOW[Math.floor(dist(p)) % RAINBOW.length], 7));
+      if (n % 6 === 0) board.hooks.sfx('pop');
+    }
+  });
+  while (n < order.length) { const p = order[n++]; pops.push(hit(board, p, RAINBOW[n % RAINBOW.length], 7)); }
   done();
   return Promise.all(pops);
 }

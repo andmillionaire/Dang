@@ -31,7 +31,7 @@ The **Pantry** sells crops for coins (wheat 3, cotton 5, flowers 8, pumpkin 14) 
 
 Every mini-game is solo and skill-based: no bot opponents.
 
-Bigger match shapes leave a charged tile on the board. A charged tile on its own does nothing: **swap two together** and the board morphs into a mini-game. Two of the same kind play a *Supercharged* version with a double-size blast; two different kinds play a **mashup**. Win and both tiles blast; lose and they fizzle. A charged tile can slide one square in any direction (it costs a move), so you can steer two together.
+Bigger match shapes leave a charged tile on the board. **Tap a charged tile** and the board morphs into its mini-game. If two charged tiles end up side by side, **swap them together**: two of the same kind play a *Supercharged* version with a double-size blast, two different kinds play a **mashup**. Win and the tiles blast; lose and they fizzle. Charged tiles don't move on their own; they only shift when a swap makes a match or merges two of them.
 
 | Shape | Tile / game | Blast |
 | --- | --- | --- |
@@ -79,7 +79,7 @@ Minesweeper under rain clouds. Some clouds hide lightning; numbers count the lig
 
 ## Magic tiles
 
-Magic tiles explode on their own, with no mini-game. Tap one, or swap it with any tile, to set it off:
+Magic tiles explode with no mini-game. Star Bombs and Moon Beams keep their tile's colour and wear a little star or cross badge: match them like any tile and they go off. The Saturn Orb has no colour: swap it with any tile to set it off.
 
 | Made by | Magic tile | Explosion |
 | --- | --- | --- |
@@ -87,7 +87,7 @@ Magic tiles explode on their own, with no mini-game. Tap one, or swap it with an
 | 6 in a row, or a 4-step chain | Moon Beam | moonbeams down its whole row and column |
 | a 7+ tile match, or a 5-step chain | Saturn Orb | every tile of the colour it's swapped with |
 
-Swap two magic tiles together for a giant combo: Star + Star is a **Supernova** (5×5), Star + Beam a **Moon Cross** (three rows and three columns), Beam + Beam a **Double Moon** (row, column and both diagonals), Orb + Star or Beam a **Saturn Storm** (every tile of the most common colour turns into that magic tile and they all go off), and Orb + Orb a **Total Eclipse** (the whole board). Magic tiles caught in any blast go off too, so chain reactions cascade.
+Swap two magic tiles together for a giant combo: Star + Star is a **Rainbow Bomb** (the whole board, with rainbows flooding the screen), Star + Beam a **Moon Cross** (three rows and three columns), Beam + Beam a **Double Moon** (row, column and both diagonals), Orb + Star or Beam a **Saturn Storm** (every tile of the most common colour turns into that magic tile and they all go off), and Orb + Orb a **Total Eclipse** (the whole board). Magic tiles caught in any blast go off too, so chain reactions cascade.
 
 ## Blasts and treasure
 
