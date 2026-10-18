@@ -854,7 +854,7 @@ export default [
       b.down({ x: 50, y: 80 });
       while (!b.over()) {
         const r = s.rows.filter(q => !q.passed && q.y < 89).sort((p, q) => q.y - p.y)[0];
-        if (r) b.move({ x: s.LANES[r.got ? (r.oil === 0 ? 1 : 0) === r.oil ? 2 : (r.oil === 0 ? 1 : 0) : r.boost], y: 80 });
+        if (r) b.move({ x: s.LANES[r.got ? (s.lane !== r.oil ? s.lane : (r.oil + 1) % 3) : r.boost], y: 80 });
         await b.wait(16);
       }
       b.up({ x: 50, y: 80 });
@@ -1098,12 +1098,12 @@ function carX(lane, x0, t) {
   if (x < 0) x += 140;
   return x - 20;
 }
-function danger(lane, t) { return lane.cars.some(x0 => Math.abs(carX(lane, x0, t) - 50) < 10); }
+function danger(lane, t, r = 10) { return lane.cars.some(x0 => Math.abs(carX(lane, x0, t) - 50) < r); }
 // Find hop times that get the frog from lane `from` (0 = kerb) to the far side by `limit` seconds.
 function plan(lanes, from, t0, limit) {
   const L = lanes.length, DT = 0.05, HOP = 3;
   const steps = Math.ceil((limit - t0) / DT);
-  const safe = (lane, k) => lane === 0 || lane > L || !danger(lanes[lane - 1], t0 + k * DT);
+  const safe = (lane, k) => lane === 0 || lane > L || !danger(lanes[lane - 1], t0 + k * DT, 13);
   const seen = new Set();
   const stack = [[from, 0, []]];
   while (stack.length) {
