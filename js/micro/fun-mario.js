@@ -400,7 +400,7 @@ export default [
     setup({ stage, win, lose, sfx, speed, frame, pos, expose }) {
       const ctx = scene(stage);
       const mark = 1 + rnd(2);
-      const s = expose({ v: 16 * speed, pipes: Array.from({ length: 4 }, (_, i) => ({ x: 70 + i * 26, tall: 58 + rnd(3) * 6, mark: i === mark })), hx: 40, dive: 0, done: false });
+      const s = expose({ v: 20 * speed, pipes: Array.from({ length: 4 }, (_, i) => ({ x: 60 + i * 22, tall: 58 + rnd(3) * 6, mark: i === mark })), hx: 40, dive: 0, done: false });
       const mk = () => s.pipes.find(p => p.mark);
       gestures(stage, pos, {
         swipe: dir => {
@@ -441,7 +441,7 @@ export default [
     id: 'fm-axe', cmd: 'Cut the bridge!', theme: 'funtendo',
     setup({ stage, win, lose, sfx, speed, frame, expose }) {
       const ctx = scene(stage);
-      const s = expose({ kx: 104, v: 10 * speed, zone: [36, 68], cut: 0, kfall: 0 });
+      const s = expose({ kx: 96, v: 13 * speed, zone: [36, 68], cut: 0, kfall: 0 });
       tapper(stage, () => {
         if (s.cut) return;
         s.cut = 0.01;
@@ -1311,7 +1311,7 @@ export default [
         ph: 0, pause: 0.9, hearts: 3, inv: 0,
         hx: 20, tx: 20, jt: -1, jT: T,
         kx: 72, kvx: -14 * speed, khp: 3, kflash: 0,
-        fire: [], fireLeft: 4, fireT: 0.6, spd: speed,
+        fire: [], fireLeft: 3, fireT: 0.4, spd: speed,
         drops: [], dropT: 0, axe: 92,
       });
       const hy = () => heroHy(s.jt, T, s.ph === 1 ? 22 : H);
@@ -1344,7 +1344,7 @@ export default [
         if (s.pause > 0 && s.ph > 0) s.pause -= dt;
         const active = s.pause <= 0 && s.ph > 0;
         if (s.jt >= 0 && (s.jt += dt) > T) s.jt = -1;
-        const move = (mx) => { const d = s.tx - s.hx; s.hx += Math.sign(d) * Math.min(Math.abs(d), mx * dt); };
+        const move = mx => { const d = s.tx - s.hx; s.hx += Math.sign(d) * Math.min(Math.abs(d), mx * dt); };
 
         if (s.ph === 1) {
           s.hx = 20;
@@ -1353,7 +1353,7 @@ export default [
             if (s.fireT <= 0 && s.fireLeft > 0) { s.fireLeft--; s.fireT = Math.max(0.95, 1.1 / speed); s.fire.push({ x: 64, k: Math.random() < 0.5 ? 'low' : 'high', passed: false }); sfx('alarm'); }
             for (const f of s.fire) {
               if (f.passed) continue;
-              f.x -= 45 * speed * dt;
+              f.x -= 55 * speed * dt;
               if (Math.abs(f.x - s.hx) < 6) {
                 if (f.k === 'low' && hy() < 9) { f.passed = true; hurt(); }
                 else if (f.k === 'high' && hy() > 5) { f.passed = true; hurt(); }
@@ -1368,10 +1368,14 @@ export default [
             s.kx += s.kvx * dt;
             if (s.kx < 46) { s.kx = 46; s.kvx = Math.abs(s.kvx); } else if (s.kx > 86) { s.kx = 86; s.kvx = -Math.abs(s.kvx); }
             const h2 = hy();
-            if (s.jt > T / 2 && Math.abs(s.hx - s.kx) < 10 && h2 > 12 && h2 < 31) {
-              s.khp--; s.kflash = 0.3; sfx('boom'); s.jt = 0.05; s.kvx = -Math.sign(s.hx - s.kx || 1) * Math.abs(s.kvx);
+            if (s.kflash <= 0 && s.jt > T / 2 && Math.abs(s.hx - s.kx) < 11 && h2 > 8 && h2 < 32) {
+              // stomp! he staggers away and you bounce off the other way
+              const away = Math.sign(s.hx - s.kx) || -1;
+              s.khp--; s.kflash = 0.7; sfx('boom'); s.jt = 0.08;
+              s.kvx = -away * Math.abs(s.kvx); s.kx = clamp(s.kx - away * 12, 46, 86);
+              s.tx = clamp(s.hx + away * 24, 6, 96);
               if (s.khp <= 0) next(3);
-            } else if (Math.abs(s.hx - s.kx) < 11 && h2 < 12) hurt();
+            } else if (s.kflash <= 0 && Math.abs(s.hx - s.kx) < 11 && h2 < 8) hurt();
           }
         } else if (s.ph === 3) {
           move(45);
@@ -1415,7 +1419,7 @@ export default [
       // phase 1: jump only the low fireballs
       while (!b.over() && s.ph < 2) {
         const f = s.fire.find(f => !f.passed);
-        if (f && f.k === 'low' && s.jt < 0 && (f.x - s.hx - 6) / (45 * s.spd) < 0.22) await b.tap({ x: 50, y: 40 });
+        if (f && f.k === 'low' && s.jt < 0 && (f.x - s.hx - 6) / (55 * s.spd) < 0.2) await b.tap({ x: 50, y: 40 });
         await b.wait(8);
       }
       // phase 2: stand off to one side, then hop onto his head

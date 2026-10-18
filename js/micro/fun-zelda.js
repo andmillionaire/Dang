@@ -1127,7 +1127,8 @@ const games = [
     setup({ stage, win, lose, sfx, speed, frame, pos, expose }) {
       const ctx = scene(stage);
       const v = 70 * speed;
-      const times = [0.6, 0.6 + 1 / speed, 0.6 + 2 / speed];
+      const gap = Math.max(0.7, 1 / speed);
+      const times = [0.6, 0.6 + gap, 0.6 + 2 * gap];
       const s = expose({ roll: 0, rdir: 1, lasers: [], spawned: 0, dodged: 0, need: 3, v, done: false });
       swipe(stage, pos, dir => { if (s.roll <= 0 && !s.done) { s.roll = 0.5; s.rdir = dir === 'left' ? -1 : 1; sfx('swap'); } });
       frame((dt, t) => {

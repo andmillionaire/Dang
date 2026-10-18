@@ -386,7 +386,7 @@ export default [
           const bx = 50, by = 88 - k * 48 - Math.sin(k * Math.PI) * 14;
           if (k < 1 || s.ok) put(ctx, spr(BALL), bx + (s.ok && k >= 1 ? Math.sin(s.thrown * 20) * 2 : 0), by, 1.4);
           if (k >= 1 && !s.ok) { sfx('nope'); return lose(); }
-          if (s.ok && k >= 1) { R(ctx, 30, 20, 40, 34, '#9fd3f2'); grass(ctx, 50); put(ctx, spr(BALL), 50 + Math.sin(s.thrown * 18) * 2, 46, 1.6); }
+          if (s.ok && k >= 1) { R(ctx, 30, 20, 40, 34, '#c8e8f8'); grass(ctx, 50); put(ctx, spr(BALL), 50 + Math.sin(s.thrown * 18) * 2, 46, 1.6); }
           if (s.ok && s.thrown > 0.95) { sfx('coin'); return win(); }
         } else put(ctx, spr(BALL), 50, 88, 1.4);
         txt(ctx, 'TAP WHEN THE RING IS SMALL', 50, 8, '#2c5a9a', 7);
