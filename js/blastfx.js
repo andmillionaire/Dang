@@ -264,3 +264,94 @@ export async function treasureFx(board, p) {
   });
   done();
 }
+
+// ---------- magic tiles (no mini-game) ----------
+//   star / supernova     gold stars burst outward and smash the tiles around it
+//   beam / moon cross /  moonbeams sweep out along the row and column (and diagonals)
+//   double moon
+//   orb / eclipse        Saturn's ring spreads out and zaps every target
+export async function magicFx(board, kind, at, cells) {
+  if (!cells.length) return;
+  if (reduced()) return board.pop(cells, at);
+  const g = board.geom();
+  const x0 = g.cx(at.c), y0 = g.cy(at.r);
+  const dist = p => Math.hypot(p.r - at.r, p.c - at.c);
+  if (kind === 'star' || kind === 'supernova') {
+    const jobs = cells.map(async p => {
+      await sleep(dist(p) * 45);
+      const x1 = g.cx(p.c), y1 = g.cy(p.r);
+      let x = x0, y = y0, rot = 0;
+      const done = actor(board, ctx => { ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(rot); star5(ctx, 4, '#ffe27a'); });
+      await tween(120 + dist(p) * 20, t => { x = x0 + (x1 - x0) * t; y = y0 + (y1 - y0) * t; rot = t * 4; });
+      done();
+      board.hooks.sfx('peg', 1 + Math.round(dist(p) * 2));
+      return hit(board, p, '#ffe27a', 9);
+    });
+    return Promise.all(await Promise.all(jobs));
+  }
+  if (kind === 'beam' || kind === 'moonCross' || kind === 'doubleMoon') {
+    // beams grow from the centre; each tile goes when the beam front reaches it
+    let reach = 0;
+    const maxD = Math.max(...cells.map(p => Math.max(Math.abs(p.r - at.r), Math.abs(p.c - at.c))));
+    const done = actor(board, ctx => {
+      const len = reach * g.CELL + 6;
+      ctx.globalAlpha = 0.85;
+      const beam = (dx, dy) => {
+        ctx.strokeStyle = '#9fd3f2'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + dx * len, y0 + dy * len); ctx.stroke();
+        ctx.strokeStyle = '#fff8e0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + dx * len, y0 + dy * len); ctx.stroke();
+      };
+      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      if (kind === 'doubleMoon') dirs.push([1, 1], [-1, -1], [1, -1], [-1, 1]);
+      if (kind === 'moonCross') for (const d of [-1, 1]) { ctx.save(); ctx.translate(d * g.CELL, d * g.CELL); dirs.forEach(([a, b]) => beam(a, b)); ctx.restore(); }
+      dirs.forEach(([a, b]) => beam(a, b));
+    });
+    board.hooks.sfx('ring');
+    const popped = new Set();
+    const pops = [];
+    await tween(260 + maxD * 40, t => {
+      reach = t * (maxD + 1);
+      for (const p of cells) {
+        const k = p.r * g.COLS + p.c;
+        if (!popped.has(k) && Math.max(Math.abs(p.r - at.r), Math.abs(p.c - at.c)) <= reach) { popped.add(k); pops.push(hit(board, p, '#bfe6ff', 7)); }
+      }
+    });
+    done();
+    return Promise.all(pops);
+  }
+  // orb / eclipse: a ring expands and zaps the targets one after another
+  let ring = 0, zaps = [];
+  const done = actor(board, ctx => {
+    ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(x0, y0, ring * 1.6, ring * 0.5, -0.3, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#d8c4f0'; ctx.lineWidth = 1;
+    for (const z of zaps) { ctx.globalAlpha = z.life; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(z.x, z.y); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  });
+  board.hooks.sfx('sparkle');
+  const order = cells.slice().sort((a, b) => dist(a) - dist(b));
+  const pops = [];
+  const step = Math.max(12, Math.min(40, 700 / order.length));
+  await tween(200, t => { ring = t * 30; });
+  for (const p of order) {
+    zaps.push({ x: g.cx(p.c), y: g.cy(p.r), life: 1 });
+    zaps.forEach(z => (z.life *= 0.7));
+    zaps = zaps.filter(z => z.life > 0.05);
+    pops.push(hit(board, p, '#d8c4f0', 6));
+    board.hooks.sfx('pop');
+    await sleep(step);
+  }
+  await tween(160, t => { ring = 30 + t * 20; zaps.forEach(z => (z.life *= 0.8)); });
+  done();
+  return Promise.all(pops);
+}
+
+function star5(ctx, r, color) {
+  ctx.fillStyle = '#1a1220';
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r + 1; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.4 : r; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+  ctx.fill();
+}

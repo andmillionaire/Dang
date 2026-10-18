@@ -84,28 +84,33 @@ export const SATURN_SET = ['ringtiara', 'violet', 'crystal', 'glaive'];
 // What each level introduces. The game starts small and builds up.
 export const UNLOCKS = {
   1: { kind: 'ttt' },
+  2: { magic: 'star' },
   3: { kind: 'mew' },
   4: { kind: 'cw' },
   5: { kind: 'pegs' },
-  6: { mashups: true },
+  6: { magic: 'beam' },
   7: { kind: 'micro' }, // the Dang! tile: chain reactions leave one behind
+  8: { magic: 'orb' },
 };
 const BOARD_SIZES = [[6, 6], [6, 7], [7, 7], [7, 8]]; // then 7x9 from level 5
 
 export function levelConfig(n) {
   const kinds = Object.entries(UNLOCKS).filter(([lv, u]) => +lv <= n && u.kind).map(([, u]) => u.kind);
+  const magic = Object.entries(UNLOCKS).filter(([lv, u]) => +lv <= n && u.magic).map(([, u]) => u.magic);
   const size = BOARD_SIZES[n - 1] || [7, 9];
   return {
     n,
     size,
     kinds,
-    mashups: n >= 6,
+    magic,
     types: n <= 2 ? 4 : n <= 7 ? 5 : 6,
     moves: n <= 2 ? 18 : Math.min(30, 20 + Math.floor(n / 3)),
     // Tuned with a bot: plain matching gets you about half to three-quarters of the way,
     // blasts make up the rest.
     target: [900, 1200, 1000, 1100, 1400][n - 1] || 1400 + (n - 5) * 200,
-    blasts: n === 1 ? 0 : n <= 4 ? 1 : n <= 9 ? 2 : 3,
+    // Mini-games only start when two charged tiles merge, and each merge blasts both tiles,
+    // so these are counted in tiles: 2 = one merge.
+    blasts: n <= 2 ? 0 : n <= 9 ? 2 : 4,
     // 0..1, how hard the big-match mini-games are.
     difficulty: Math.min(1, (n - 1) / 12),
   };

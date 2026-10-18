@@ -1,6 +1,6 @@
 import { fitCanvas, toLogical, sleep, tween, ease } from './pixel.js';
-import { TILES, TILES_WHITE, TILES_GREY, TILE_COLORS, SPECIALS, CHEST } from './sprites.js';
-import { blastFx, treasureFx } from './blastfx.js';
+import { TILES, TILES_WHITE, TILES_GREY, TILE_COLORS, SPECIALS, CHEST, MAGIC } from './sprites.js';
+import { blastFx, treasureFx, magicFx } from './blastfx.js';
 
 const CELL = 14, PAD = 4;
 // The board grows as you progress, so its size is set per level in start().
@@ -10,6 +10,7 @@ const inBounds = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
 const key = p => p.r * COLS + p.c;
 const cx = c => PAD + c * CELL + CELL / 2, cy = r => PAD + r * CELL + CELL / 2;
 const COMBO_WORDS = ['', '', 'Dang!', 'Lovely!', 'Magical!', 'Spellbinding!'];
+export const MAGIC_NAME = { star: 'Star Bomb', beam: 'Moon Beam', orb: 'Saturn Orb', supernova: 'Supernova', moonCross: 'Moon Cross', doubleMoon: 'Double Moon', eclipse: 'Total Eclipse' };
 let uid = 0;
 
 // Which charged tile a match shape makes: the first rule that fits and is unlocked wins,
@@ -96,9 +97,10 @@ export class Board {
   // Colour at a cell: -1 empty, -2 charged tile, -3 treasure chest (neither ever matches).
   T(r, c) {
     const t = this.grid[r] && this.grid[r][c];
-    return !t ? -1 : t.sp ? -2 : t.chest ? -3 : t.t;
+    return !t ? -1 : t.sp ? -2 : t.chest ? -3 : t.mg ? -4 : t.t;
   }
   specials() { return this.grid.flat().filter(t => t && t.sp); }
+  magics() { return this.grid.flat().filter(t => t && t.mg); }
 
   fillInitial() {
     do {
@@ -195,7 +197,9 @@ export class Board {
       for (const [dr, dc] of [[0, 1], [1, 0]]) {
         const r2 = r + dr, c2 = c + dc;
         if (!inBounds(r2, c2) || !g[r][c] || !g[r2][c2]) continue;
-        if (g[r][c].sp && g[r2][c2].sp && this.cfg.mashups !== false) { moves.push({ a: { r, c }, b: { r: r2, c: c2 }, size: 9 }); continue; }
+        if (g[r][c].sp && g[r2][c2].sp) { moves.push({ a: { r, c }, b: { r: r2, c: c2 }, size: 9 }); continue; }
+        if (g[r][c].mg || g[r2][c2].mg) { moves.push({ a: { r, c }, b: { r: r2, c: c2 }, size: 8 }); continue; }
+        if (g[r][c].sp || g[r2][c2].sp || g[r][c].chest || g[r2][c2].chest) continue;
         [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
         const size = Math.max(this.matchAt(r, c), this.matchAt(r2, c2));
         [g[r][c], g[r2][c2]] = [g[r2][c2], g[r][c]];
@@ -226,7 +230,8 @@ export class Board {
       return;
     }
     if (this.sel && key(this.sel) === key(p)) { this.sel = null; return; }
-    this.drag = { ...p, x: e.clientX, y: e.clientY, special: !!this.grid[p.r][p.c].sp };
+    const tile = this.grid[p.r][p.c];
+    this.drag = { ...p, x: e.clientX, y: e.clientY, special: !!(tile.sp || tile.mg) };
     if (!this.drag.special) { this.sel = p; this.hooks.sfx('select'); }
     this.canvas.setPointerCapture?.(e.pointerId);
   }
@@ -244,18 +249,22 @@ export class Board {
     this.attemptSwap(a, b);
   }
 
-  // A tap (no drag) on a charged tile plays its mini-game.
+  // A tap (no drag) on a magic tile sets it off. Charged tiles only play when merged with another.
   onUp() {
     const d = this.drag;
     this.drag = null;
     if (!d || !d.special || this.busy || this.ended) return;
-    this.activate({ r: d.r, c: d.c });
+    const t = this.grid[d.r][d.c];
+    if (t.mg) return this.activate({ r: d.r, c: d.c });
+    t.sx = 1.25; t.sy = 0.8;
+    this.hooks.sfx('nope');
+    this.hooks.toast('Charged tiles play when you swap two together. Slide this one toward another charged tile.');
   }
 
   // ---------- turn flow ----------
   async attemptSwap(a, b) {
     if (this.moves <= 0) {
-      this.hooks.toast('Out of moves! Tap your charged tiles to set them off.');
+      this.hooks.toast('Out of moves!');
       return;
     }
     const gen = this.gen;
@@ -263,7 +272,7 @@ export class Board {
     this.hint = null;
     const A = this.grid[a.r][a.c], B = this.grid[b.r][b.c];
 
-    if (A.sp && B.sp && this.cfg.mashups !== false) {
+    if (A.sp && B.sp) {
       this.hooks.sfx('swap');
       await tween(160, t => { A.x = a.c + (b.c - a.c) * t * 0.6; A.y = a.r + (b.r - a.r) * t * 0.6; }, ease.inOut);
       this.moves--;
@@ -272,10 +281,44 @@ export class Board {
       return this.afterTurn(gen);
     }
 
+    // Magic tiles: swap two together for a giant combo, or swap one with any tile to set it off.
+    if (A.mg || B.mg) {
+      this.hooks.sfx('swap');
+      if (A.mg && B.mg) {
+        await tween(160, t => { A.x = a.c + (b.c - a.c) * t * 0.6; A.y = a.r + (b.r - a.r) * t * 0.6; }, ease.inOut);
+        this.moves--;
+        this.hooks.onUpdate(this);
+        await this.magicCombo(A, B, b, gen);
+        return this.afterTurn(gen);
+      }
+      const [M, O, mAt, oAt] = A.mg ? [A, B, a, b] : [B, A, b, a];
+      if (O.sp || O.chest) {
+        // can't trade places with a charged tile or chest: it just goes off where it is
+        this.moves--;
+        this.hooks.onUpdate(this);
+        await this.explodeMagic(M, mAt, gen);
+        return this.afterTurn(gen);
+      }
+      this.grid[a.r][a.c] = B; this.grid[b.r][b.c] = A;
+      await this.animSwap(A, B, a, b);
+      this.moves--;
+      this.hooks.onUpdate(this);
+      await this.explodeMagic(M, oAt, gen, O.t);
+      return this.afterTurn(gen);
+    }
+
     this.hooks.sfx('swap');
     this.grid[a.r][a.c] = B;
     this.grid[b.r][b.c] = A;
     const groups = this.findGroups();
+    // A charged tile can always slide one square (to bring it next to another charged tile).
+    if (!groups.length && (A.sp || B.sp) && !A.chest && !B.chest) {
+      this.hooks.buzz && this.hooks.buzz(8);
+      await this.animSwap(A, B, a, b);
+      this.moves--;
+      this.hooks.onUpdate(this);
+      return this.afterTurn(gen);
+    }
     if (!groups.length) {
       this.grid[a.r][a.c] = A;
       this.grid[b.r][b.c] = B;
@@ -295,9 +338,14 @@ export class Board {
 
   async activate(p) {
     const gen = this.gen;
+    if (this.moves <= 0) { this.hooks.toast('Out of moves!'); return; }
     this.busy = true;
     this.hint = null;
-    await this.detonate([this.grid[p.r][p.c]], p, gen);
+    const t = this.grid[p.r][p.c];
+    this.moves--;
+    this.hooks.onUpdate(this);
+    if (t.mg) await this.explodeMagic(t, p, gen);
+    else await this.detonate([t], p, gen);
     return this.afterTurn(gen);
   }
 
@@ -359,10 +407,28 @@ export class Board {
       let pts = 0;
       // The first link of a chain reaction ("Dang!") leaves a Dang! tile behind.
       let dang = combo === 2 && this.cfg.kinds?.includes('micro') && this.grid.flat().filter(t => t && t.sp === 'micro').length < 2;
+      // Magic tiles: big shapes and long chains. A swap that makes two matches at once, or a
+      // 3-step chain, makes a Star Bomb; 6 in a row or a 4-step chain a Moon Beam; 7+ tiles or a
+      // 5-step chain a Saturn Orb.
+      const magic = this.cfg.magic || [];
+      const chainMagic = combo >= 5 ? 'orb' : combo === 4 ? 'beam' : combo === 3 ? 'star' : combo === 1 && groups.length >= 2 ? 'star' : null;
+      let pending = chainMagic && magic.includes(chainMagic) ? chainMagic : null;
       for (const g of groups) {
         pts += g.cells.length * 10 * combo + Math.max(0, g.cells.length - 3) * 20;
-        let kind = kindOf(g, this.cfg.kinds);
-        if (!kind && dang) { kind = 'micro'; dang = false; }
+        let mg = g.cells.length >= 7 && magic.includes('orb') ? 'orb' : Math.max(g.h, g.v) >= 6 && magic.includes('beam') ? 'beam' : null;
+        let kind = mg ? null : kindOf(g, this.cfg.kinds);
+        if (!kind && !mg && pending) { mg = pending; pending = null; }
+        if (!kind && !mg && dang) { kind = 'micro'; dang = false; }
+        if (mg) {
+          const keep = (combo === 1 && origins.find(o => g.cells.some(p => key(p) === key(o)))) || g.cells[Math.floor(g.cells.length / 2)];
+          const t = this.grid[keep.r][keep.c];
+          t.mg = mg;
+          t.born = performance.now();
+          t.s = 0.2;
+          this.hooks.onMagic && this.hooks.onMagic(mg);
+          sucks.push({ to: keep, items: g.cells.filter(p => key(p) !== key(keep)).map(p => ({ p, tile: this.grid[p.r][p.c] })) });
+          continue;
+        }
         let keep = null;
         if (kind) {
           keep = (combo === 1 && origins.find(o => g.cells.some(p => key(p) === key(o)))) || g.cells[Math.floor(g.cells.length / 2)];
@@ -417,36 +483,36 @@ export class Board {
 
   // Cells a charged tile clears. Charged tiles themselves are never caught in a blast.
   blastCells(kinds, at) {
-    const big = !!this.cfg.bigBlasts;
+    let big = !!this.cfg.bigBlasts;
     const out = new Map();
     const add = (r, c) => { if (inBounds(r, c) && this.grid[r][c] && !this.grid[r][c].sp && !this.grid[r][c].chest) out.set(r * COLS + c, { r, c }); };
-    if (kinds.length === 2 && kinds[0] === kinds[1]) {
-      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) add(r, c);
-      return [...out.values()];
-    }
+    // two of a kind merged (supercharged): that kind's big blast
+    const sup = kinds.length === 2 && kinds[0] === kinds[1];
+    if (sup) kinds = [kinds[0]];
+    const bigOne = big || sup;
     for (const k of kinds) {
       if (k === 'ttt') {
-        for (let w = big ? -1 : 0; w <= (big ? 1 : 0); w++) {
+        for (let w = bigOne ? -1 : 0; w <= (bigOne ? 1 : 0); w++) {
           for (let c = 0; c < COLS; c++) add(at.r + w, c);
           for (let r = 0; r < ROWS; r++) add(r, at.c + w);
         }
       } else if (k === 'mew') {
-        const rad = big ? 3 : 2;
+        const rad = bigOne ? 3 : 2;
         for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) add(at.r + dr, at.c + dc);
       } else if (k === 'cw') {
         for (let d = -ROWS; d <= ROWS; d++) { add(at.r + d, at.c + d); add(at.r + d, at.c - d); }
-        if (big) for (let c = 0; c < COLS; c++) add(at.r, c);
+        if (bigOne) for (let c = 0; c < COLS; c++) add(at.r, c);
       } else if (k === 'micro') {
         // a 3x3 zap where it sits, plus lightning on random tiles
-        const rad = big ? 2 : 1;
+        const rad = bigOne ? 2 : 1;
         for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) add(at.r + dr, at.c + dc);
         const rest = [];
         for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (this.grid[r][c] && !this.grid[r][c].sp) rest.push({ r, c });
-        rest.sort(() => Math.random() - 0.5).slice(0, big ? 12 : 8).forEach(p => add(p.r, p.c));
+        rest.sort(() => Math.random() - 0.5).slice(0, bigOne ? 12 : 8).forEach(p => add(p.r, p.c));
       } else if (k === 'pegs') {
         const counts = {};
         for (const t of this.grid.flat()) if (t && !t.sp) counts[t.t] = (counts[t.t] || 0) + 1;
-        const ranked = Object.keys(counts).sort((x, y) => counts[y] - counts[x]).map(Number).slice(0, big ? 2 : 1);
+        const ranked = Object.keys(counts).sort((x, y) => counts[y] - counts[x]).map(Number).slice(0, bigOne ? 2 : 1);
         for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (ranked.includes(this.T(r, c))) add(r, c);
       }
     }
@@ -477,7 +543,8 @@ export class Board {
       this.addScore(250 * tiles.length + cells.length * 15, [at], '', true);
       this.hooks.onUpdate(this);
       // each kind delivers its own blast: falling letters, a pinball, stamped marks, pouncing cats...
-      await blastFx(this, tiles.map(t => t.sp || t.was), at, cells);
+      const kinds = tiles.map(t => t.sp || t.was);
+      await this.blastWith(c => blastFx(this, kinds, at, c), cells);
       await this.pop(where, at);
     } else {
       tiles.forEach(t => (t.dead = true));
@@ -486,6 +553,106 @@ export class Board {
       await this.pop(where);
     }
     await this.collapse();
+    await this.resolve(this.findGroups(), gen);
+  }
+
+  // ---------- magic tiles ----------
+  // Cells a magic tile clears. Charged tiles and chests are never caught; other magic tiles are,
+  // and go off in turn (chain reactions).
+  magicCells(kind, at, colour) {
+    const out = new Map();
+    const add = (r, c) => { if (inBounds(r, c) && this.grid[r][c] && !this.grid[r][c].sp && !this.grid[r][c].chest) out.set(r * COLS + c, { r, c }); };
+    const area = rad => { for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) add(at.r + dr, at.c + dc); };
+    const cross = (r, c) => { for (let k = 0; k < COLS; k++) add(r, k); for (let k = 0; k < ROWS; k++) add(k, c); };
+    if (kind === 'star') area(1);
+    else if (kind === 'supernova') area(2);
+    else if (kind === 'beam') cross(at.r, at.c);
+    else if (kind === 'moonCross') for (let d = -1; d <= 1; d++) cross(at.r + d, at.c + d);
+    else if (kind === 'doubleMoon') { cross(at.r, at.c); for (let d = -ROWS; d <= ROWS; d++) { add(at.r + d, at.c + d); add(at.r + d, at.c - d); } }
+    else if (kind === 'orb') { const col = colour ?? this.commonColour(); for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { const t = this.grid[r][c]; if (t && !t.mg && t.t === col) add(r, c); } }
+    else if (kind === 'eclipse') for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) add(r, c);
+    out.delete(at.r * COLS + at.c);
+    return [...out.values()];
+  }
+
+  commonColour() {
+    const n = {};
+    for (const t of this.grid.flat()) if (t && !t.sp && !t.mg && !t.chest && !t.dead) n[t.t] = (n[t.t] || 0) + 1;
+    return Number(Object.keys(n).sort((a, b) => n[b] - n[a])[0] ?? 0);
+  }
+
+  // Blast cells with an effect; any magic tiles among them set off their own blast afterwards.
+  async blastWith(fx, cells, depth = 0) {
+    const chain = [], rest = [];
+    for (const p of cells) {
+      const t = this.grid[p.r][p.c];
+      if (t && t.mg && !t.going && depth < 6) { t.going = true; chain.push(t); } else rest.push(p);
+    }
+    await fx(rest);
+    for (const t of chain) {
+      const at = this.find(t);
+      if (!at) continue;
+      const kind = t.mg;
+      this.say(MAGIC_NAME[kind] + '!', '#f8b0d4');
+      this.ring(at, 40, '#f8b0d4');
+      this.addScore(100 + 15 * depth, [at], '', false);
+      await this.blastWith(c => magicFx(this, kind, at, c), this.magicCells(kind, at), depth + 1);
+      await this.pop([at], at);
+    }
+  }
+
+  // One magic tile goes off at `at`. colour: the tile it was swapped with (for the Saturn Orb).
+  async explodeMagic(M, at, gen, colour) {
+    M.going = true;
+    const kind = M.mg;
+    this.hooks.sfx('boom');
+    this.hooks.buzz && this.hooks.buzz([30, 20, 50]);
+    this.shake = 10;
+    this.ring(at, 60, '#f8b0d4');
+    this.say(MAGIC_NAME[kind] + '!', '#f8b0d4');
+    const cells = this.magicCells(kind, at, colour);
+    this.addScore(150 + cells.length * 20, [at], MAGIC_NAME[kind], true);
+    await this.blastWith(c => magicFx(this, kind, at, c), cells);
+    await this.pop([at], at);
+    if (gen !== this.gen) return;
+    await this.collapse();
+    await this.openChests(gen);
+    await this.resolve(this.findGroups(), gen);
+  }
+
+  // Two magic tiles swapped together: a giant combo.
+  async magicCombo(A, B, at, gen) {
+    A.going = B.going = true;
+    const pair = [A.mg, B.mg].sort().join('+');
+    const big = { 'star+star': 'supernova', 'beam+star': 'moonCross', 'beam+beam': 'doubleMoon', 'orb+orb': 'eclipse' }[pair];
+    this.hooks.sfx('boom');
+    this.hooks.buzz && this.hooks.buzz([60, 30, 60, 30, 120]);
+    this.shake = 18;
+    this.flash = 1;
+    this.ring(at, 120, '#fff8e0');
+    setTimeout(() => this.ring(at, 90, '#f8b0d4'), 120);
+    const where = [this.find(A), this.find(B)].filter(Boolean);
+    if (big) {
+      this.say(MAGIC_NAME[big] + '!', '#f8b0d4');
+      const cells = this.magicCells(big, at).filter(p => !where.some(w => w.r === p.r && w.c === p.c));
+      this.addScore(600 + cells.length * 25, [at], MAGIC_NAME[big], true);
+      await this.blastWith(c => magicFx(this, big, at, c), cells);
+    } else {
+      // Saturn Orb + Star or Beam: every tile of the most common colour becomes that magic, then they all go off.
+      const other = A.mg === 'orb' ? B.mg : A.mg;
+      const col = this.commonColour();
+      const targets = [];
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { const t = this.grid[r][c]; if (t && !t.sp && !t.mg && !t.chest && t.t === col) { t.mg = other; t.born = performance.now(); targets.push({ r, c }); } }
+      this.say('Saturn Storm!', '#f8b0d4');
+      this.addScore(800 + targets.length * 40, [at], 'Saturn Storm', true);
+      this.hooks.sfx('sparkle');
+      await sleep(450);
+      await this.blastWith(c => magicFx(this, 'orb', at, c), targets);
+    }
+    await this.pop(where, at);
+    if (gen !== this.gen) return;
+    await this.collapse();
+    await this.openChests(gen);
     await this.resolve(this.findGroups(), gen);
   }
 
@@ -571,7 +738,7 @@ export class Board {
   checkEnd() {
     const c = this.cfg;
     const won = this.score >= c.target && this.blasts >= c.blasts;
-    const stuck = this.moves <= 0 && !this.specials().length;
+    const stuck = this.moves <= 0;
     if (won || stuck) {
       this.ended = true;
       this.hooks.onEnd(this, won);
@@ -579,7 +746,7 @@ export class Board {
     }
     if (this.moves <= 0 && !this.warnedNoMoves) {
       this.warnedNoMoves = true;
-      this.hooks.toast('Out of moves! Tap your charged tiles to set them off.');
+      this.hooks.toast('Out of moves!');
     }
     return false;
   }
@@ -696,13 +863,17 @@ export class Board {
         ctx.fillStyle = `rgba(255,226,122,${0.25 + slow * 0.35})`;
         ctx.fillRect(PAD + t.x * CELL, PAD + t.y * CELL, CELL, CELL);
       }
-      const img = t.chest ? CHEST : t.sp ? SPECIALS[t.sp] : t.dead ? TILES_GREY[t.t] : TILES[t.t];
+      if (t.mg) {
+        ctx.fillStyle = `rgba(240,138,176,${0.2 + slow * 0.35})`;
+        ctx.fillRect(PAD + t.x * CELL, PAD + t.y * CELL, CELL, CELL);
+      }
+      const img = t.chest ? CHEST : t.mg ? MAGIC[t.mg] : t.sp ? SPECIALS[t.sp] : t.dead ? TILES_GREY[t.t] : TILES[t.t];
       if (t.dead) ctx.globalAlpha = 0.5;
       const sw = 12 * t.s * (t.sx || 1), sh = 12 * t.s * (t.sy || 1);
       const dx = px + 6 - sw / 2, dy = (t.sy || 1) < 1 ? py + 12 - sh : py + 6 - sh / 2;
       if (sw !== 12 || sh !== 12) ctx.drawImage(img, dx, dy, sw, sh);
       else ctx.drawImage(img, px, py);
-      if (t.flash > 0.02 && !t.sp && !t.dead && !t.chest) {
+      if (t.flash > 0.02 && !t.sp && !t.dead && !t.chest && !t.mg) {
         ctx.globalAlpha = Math.min(1, t.flash);
         ctx.drawImage(TILES_WHITE[t.t], dx, dy, sw, sh);
       }

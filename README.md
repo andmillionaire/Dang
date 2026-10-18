@@ -29,7 +29,7 @@ The **Pantry** sells crops for coins (wheat 3, cotton 5, flowers 8, pumpkin 14) 
 
 ## Charged tiles and mini-games
 
-Bigger match shapes leave a charged tile on the board. Tap it and the board morphs into its mini-game. Win and it blasts. Lose and it fizzles.
+Bigger match shapes leave a charged tile on the board. A charged tile on its own does nothing: **swap two together** and the board morphs into a mini-game. Two of the same kind play a *Supercharged* version with a double-size blast; two different kinds play a **mashup**. Win and both tiles blast; lose and they fizzle. A charged tile can slide one square in any direction (it costs a move), so you can steer two together.
 
 | Shape | Tile / game | Blast |
 | --- | --- | --- |
@@ -43,17 +43,18 @@ You start small and the game opens up as you go:
 
 | Level | Board | New |
 | --- | --- | --- |
-| 1 | 6×6, 4 colours, no blast needed | 4 in a row → Tic-Tac-Toe |
-| 2 | 6×7 | first blast required |
-| 3 | 7×7, 5 colours | L / T / + → Mewdoku |
+| 1 | 6×6, 4 colours | 4 in a row → Tic-Tac-Toe |
+| 2 | 6×7 | Star Bomb (magic) |
+| 3 | 7×7, 5 colours | L / T / + → Mewdoku, first merge required, mashups possible |
 | 4 | 7×8 | 2×2 box → Word Search |
 | 5 | 7×9 | 5 in a row → Star Pegs |
-| 6 | 7×9 | mashups |
-| 7+ | 7×9, 6 colours from level 8 | chain reactions leave a Dang! tile; targets, moves and blasts keep climbing |
+| 6 | 7×9 | Moon Beam (magic) |
+| 7 | 7×9 | chain reactions leave a Dang! tile |
+| 8+ | 7×9, 6 colours | Saturn Orb (magic); targets and moves keep climbing, two merges needed from level 10 |
 
 Shapes you haven't unlocked yet just match normally. Each unlock gets a "New!" card the first time.
 
-Swipe two charged tiles together for a **mashup**. These are fused games, not reskins:
+Mashups are fused games, not reskins:
 
 | Mashup | How it plays |
 | --- | --- |
@@ -68,7 +69,19 @@ Swipe two charged tiles together for a **mashup**. These are fused games, not re
 | Word Rush | Rapid 5-second word microgames: unscramble, fill the gap, spot the real word, answer the clue, type it out. |
 | Word Mewdoku | Each colour has a letter. Read top to bottom, the cats spell the clue's answer, so solving the clue tells you which colour each row's cat is in. |
 
-Two of the same kind give a *Supercharged* version that clears the whole board. Chain reactions call out **Dang!**, then Lovely!, Magical!, Spellbinding!. Every level needs points **and** blasts, so some days the storm just wins.
+Chain reactions call out **Dang!**, then Lovely!, Magical!, Spellbinding!. Every level needs points **and** blasts, so some days the storm just wins.
+
+## Magic tiles
+
+Magic tiles explode on their own, with no mini-game. Tap one, or swap it with any tile, to set it off:
+
+| Made by | Magic tile | Explosion |
+| --- | --- | --- |
+| a swap that makes two matches at once, or a 3-step chain | Star Bomb | the 3×3 around it |
+| 6 in a row, or a 4-step chain | Moon Beam | moonbeams down its whole row and column |
+| a 7+ tile match, or a 5-step chain | Saturn Orb | every tile of the colour it's swapped with |
+
+Swap two magic tiles together for a giant combo: Star + Star is a **Supernova** (5×5), Star + Beam a **Moon Cross** (three rows and three columns), Beam + Beam a **Double Moon** (row, column and both diagonals), Orb + Star or Beam a **Saturn Storm** (every tile of the most common colour turns into that magic tile and they all go off), and Orb + Orb a **Total Eclipse** (the whole board). Magic tiles caught in any blast go off too, so chain reactions cascade.
 
 ## Blasts and treasure
 
@@ -107,6 +120,10 @@ A Peggle-style cartridge with 200 levels: 20 themed peg layouts (Heart, Saturn, 
 - Stars come from your score, first clears pay coins, and the leaderboard ranks the total of your best scores.
 
 The charged Star Pegs tile on the board plays one of these layouts too (`js/pegs/`).
+
+### Word Search
+
+100 timed word searches, a new theme every 20 levels: Rainy Cabin, Magical Girls, Swiftie Eras (Taylor Swift albums, songs and cats), Attic Garden and Starry Night. Grids grow from 8×8 to 12×12 and word lists from 6 to 12; words run backwards from level 26 and in every direction from level 51. Stars come from your time, hints cost coins and add 10 seconds, and times go to per-level and overall leaderboards. Levels are seeded so everyone gets the same puzzles.
 
 ### DANG! Micro Mayhem
 

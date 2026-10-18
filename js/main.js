@@ -55,6 +55,7 @@ const board = new Board($('#boardCanvas'), {
   onUpdate: updateMatchHud,
   onSpecial: runSpecial,
   onCreate: explainCharged,
+  onMagic: explainMagic,
   onEnd: onLevelEnd,
   onTreasure: openTreasure,
 });
@@ -209,9 +210,9 @@ function startLevel(n) {
 }
 
 // First level: the basics. Levels that unlock something open with a "New!" card.
-// Footer hint; the swipe-two part only once mashups are unlocked.
+// Footer hint.
 function setTip() {
-  $('#mTip').replaceChildren(h('b', {}, 'Tap'), board.cfg?.mashups ? ' a charged tile to play it, or swipe two together' : ' a charged tile to play its mini-game');
+  $('#mTip').replaceChildren(h('b', {}, 'Swap two charged tiles together'), ' to play a mini-game', board.cfg?.magic?.length ? '. Tap magic tiles to set them off.' : '.');
 }
 
 function introduce(n, cfg) {
@@ -223,7 +224,8 @@ function introduce(n, cfg) {
       body: h('div', { class: 'howto' },
         h('p', {}, 'Swap neighbouring tiles to line up ', h('b', {}, '3 or more'), '.'),
         h('p', {}, 'Line up ', h('b', {}, '4 in a row'), ' and one tile stays behind as a ', icon('sp_ttt'), h('b', {}, ' charged tile'), '.'),
-        h('p', {}, h('b', {}, 'Tap'), ' it and the board morphs into a tic-tac-toe game against the storm. Win and it ', h('b', {}, 'blasts'), ' its whole row and column.'),
+        h('p', {}, 'Make two and ', h('b', {}, 'swap them together'), ': the board morphs into a tic-tac-toe game against the storm. Win and they ', h('b', {}, 'blast'), ' everything around them.'),
+        h('p', {}, 'A charged tile can slide one square in any direction, so you can bring two together.'),
         h('p', {}, cfg.blasts ? `This level needs ${cfg.target} points and ${cfg.blasts} blast.` : `This first level just needs ${cfg.target} points. Have fun!`)),
       buttons: [{ label: 'Got it', cls: 'primary' }],
     });
@@ -233,6 +235,7 @@ function introduce(n, cfg) {
   S.seen['unlock' + n] = true;
   persist();
   const g = u.kind && GAMES[u.kind];
+  const M = u.magic && MAGIC_INFO[u.magic];
   showModal({
     title: 'New!',
     cls: 'win new-card',
@@ -240,15 +243,23 @@ function introduce(n, cfg) {
       ? h('div', { class: 'howto center' },
         h('p', { class: 'new-icon' }, icon('sp_' + u.kind, 'ico huge')),
         h('p', {}, h('b', {}, g.shape), ' now makes a ', h('b', {}, `${g.name} tile`), '.'),
-        h('p', {}, `Tap it to play ${g.name}. Win and it ${g.blast}.`))
+        h('p', {}, `Swap two together for Supercharged ${g.name}. Win and it ${g.blast}, twice as big.`),
+        n >= 3 && h('p', {}, h('b', {}, 'Mashups:'), ' swap it into a different charged tile to play a game that fuses both.'))
       : h('div', { class: 'howto center' },
-        h('p', { class: 'new-icon' }, icon('sp_ttt', 'ico huge'), icon('sp_pegs', 'ico huge')),
-        h('p', {}, h('b', {}, 'Mashups!'), ' Swipe two charged tiles together to play a game that fuses both, like Plinko into a tic-tac-toe board.'),
-        h('p', {}, 'Win and you get both blasts at once. Two of the same make a Supercharged version that clears the board.')),
+        h('p', { class: 'new-icon' }, icon('mg_' + u.magic, 'ico huge')),
+        h('p', {}, h('b', {}, M.how), ' makes a ', h('b', {}, M.name), ', a magic tile.'),
+        h('p', {}, `Tap it, or swap it with any tile, and it ${M.does}. No mini-game needed.`),
+        h('p', {}, 'Swap two magic tiles together for a huge combo!')),
     buttons: [{ label: 'Let’s go', cls: 'primary' }],
   });
   requestAnimationFrame(() => sparkle(document.querySelector('#modal .new-icon'), { count: 16 }));
 }
+
+const MAGIC_INFO = {
+  star: { name: 'Star Bomb', how: 'Two matches from one swap, or a 3-step chain reaction,', does: 'blasts the 3×3 around it' },
+  beam: { name: 'Moon Beam', how: '6 in a row, or a 4-step chain reaction,', does: 'fires moonbeams down its row and column' },
+  orb: { name: 'Saturn Orb', how: 'A 7-tile match, or a 5-step chain reaction,', does: 'zaps every tile of one colour' },
+};
 
 // First time each kind of charged tile appears, say what it does.
 function explainCharged(kind) {
@@ -256,7 +267,15 @@ function explainCharged(kind) {
   S.seen['sp_' + kind] = true;
   persist();
   const g = GAMES[kind];
-  toast(`${g.shape}: you made a ${g.name} tile! Tap it to play. Win and it ${g.blast}.`);
+  toast(`${g.shape}: you made a ${g.name} tile! Make another and swap them together to play.`);
+}
+
+function explainMagic(kind) {
+  if (S.seen['mg_' + kind]) return;
+  S.seen['mg_' + kind] = true;
+  persist();
+  const M = MAGIC_INFO[kind];
+  toast(`You made a ${M.name}! Tap it or swap it and it ${M.does}.`);
 }
 
 async function runSpecial(b, kinds) {

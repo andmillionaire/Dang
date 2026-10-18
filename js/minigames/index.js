@@ -46,7 +46,7 @@ export function gameFor(kinds) {
   const [a, b] = [...kinds].sort();
   if (a === b) {
     const base = GAMES[a];
-    return { key: base.key, name: `Supercharged ${base.name}`, super: true, play: o => base.play({ ...o, difficulty: Math.min(1, o.difficulty + 0.35) }) };
+    return { key: base.key, name: `Supercharged ${base.name}`, super: true, play: o => base.play({ ...o, difficulty: Math.min(1, o.difficulty + 0.2) }) };
   }
   const order = ['ttt', 'pegs', 'mew', 'cw', 'micro'];
   const [x, y] = [a, b].sort((p, q) => order.indexOf(q) - order.indexOf(p));

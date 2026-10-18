@@ -558,6 +558,52 @@ export const SPECIAL_ROWS = {
   ],
 };
 
+// Magic tiles (12x12): explode on their own, no mini-game.
+export const MAGIC_ROWS = {
+  star: [
+    'kkkkkkkkkkkk',
+    'kPPPPyyPPPPk',
+    'kPPPPyyPPPPk',
+    'kPPPyyyyPPPk',
+    'kyyyyyyyyyyk',
+    'kPyyywyyyyPk',
+    'kPPyyyyyyPPk',
+    'kPPPyyyyPPPk',
+    'kPPyyPPyyPPk',
+    'kPyyPPPPyyPk',
+    'kPPPPPPPPPPk',
+    'kkkkkkkkkkkk',
+  ],
+  beam: [
+    'kkkkkkkkkkkk',
+    'kDDDDuDDDDDk',
+    'kDDwwuDDDDDk',
+    'kDwwDuDDDDDk',
+    'kwwDDuDDDDDk',
+    'kuuuuwuuuuuk',
+    'kwwDDuDDDDDk',
+    'kDwwDuDDDDDk',
+    'kDDwwuDDDDDk',
+    'kDDDDuDDDDDk',
+    'kDDDDuDDDDDk',
+    'kkkkkkkkkkkk',
+  ],
+  orb: [
+    'kkkkkkkkkkkk',
+    'kPPPPPPPPPPk',
+    'kPPPppppPPPk',
+    'kPPppfpppPPk',
+    'kyyppppppyyk',
+    'kPyyyyyyyyPk',
+    'kPPpyyyypPPk',
+    'kPPppppppPPk',
+    'kPPPppppPPPk',
+    'kPPPPPPPPPPk',
+    'kPPPPPPPPPPk',
+    'kkkkkkkkkkkk',
+  ],
+};
+
 // Treasure chest tile (12x12): the rare drop you steer to the bottom of the board.
 export const CHEST_ROWS = [
   '..kkkkkkkk..',

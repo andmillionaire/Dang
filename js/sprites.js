@@ -1,4 +1,4 @@
-import { PAL, TILE_ROWS, CROP_ROWS, ICON_ROWS, ACCESSORY, CAT_ROWS, CAT_BREEDS, PEG_ROWS, BALL_ROWS, SPECIAL_ROWS, CHEST_ROWS, GIRL_ROWS, GIRLS as GIRL_DEFS, PET_ROWS, PET_PAL } from './spritedata.js';
+import { PAL, TILE_ROWS, CROP_ROWS, ICON_ROWS, ACCESSORY, CAT_ROWS, CAT_BREEDS, PEG_ROWS, BALL_ROWS, SPECIAL_ROWS, CHEST_ROWS, MAGIC_ROWS, GIRL_ROWS, GIRLS as GIRL_DEFS, PET_ROWS, PET_PAL } from './spritedata.js';
 export { TILE_COLORS } from './spritedata.js';
 
 export function build(rows, recolor) {
@@ -35,6 +35,8 @@ CAT_BREEDS.forEach((b, i) => (ICONS['cat' + i] = CATS[i]));
 export const SPECIALS = mapObj(SPECIAL_ROWS, rows => build(rows, ch => ({ D: '#24305a', P: '#3a2a5c', F: '#c0507a' }[ch] || PAL[ch])));
 Object.entries(SPECIALS).forEach(([k, c]) => (ICONS['sp_' + k] = c));
 export const CHEST = build(CHEST_ROWS);
+export const MAGIC = mapObj(MAGIC_ROWS, rows => build(rows, ch => ({ D: '#24305a', P: '#3a2a5c' }[ch] || PAL[ch])));
+Object.entries(MAGIC).forEach(([k, c]) => (ICONS['mg_' + k] = c));
 ICONS.chest = CHEST;
 
 export const GIRLS = GIRL_DEFS.map(g => build(GIRL_ROWS[g.style], ch => ({ H: g.H, G: g.G, X: g.X, E: g.E, s: '#f7d4b8', m: '#d0463c' }[ch] || PAL[ch])));
