@@ -910,7 +910,7 @@ export default [
         for (const [r, c] of target) R(ctx, X0 + c * CS + 2, Y0 + r * CS + 2, CS - 4, CS - 4, 'rgba(255,226,122,0.18)');
         for (const [r, c] of cells()) block(ctx, X0 + c * CS, Y0 + r * CS, CS, clearT && Math.floor(clearT * 20) % 2 ? '#fff4e0' : BCOL[shape]);
         txt(ctx, '◀', 8, 50, '#9fb4d0', 12); txt(ctx, '▶', 92, 50, '#9fb4d0', 12);
-        txt(ctx, 'TAP SIDES MOVE · MIDDLE ROTATES · SWIPE DOWN DROPS', 50, 96, '#fff4e0', 5);
+        txt(ctx, 'SIDES MOVE · MIDDLE SPINS · SWIPE ↓', 50, 96, '#fff4e0', 6);
       });
     },
     async solve(b, s) {
@@ -1004,7 +1004,7 @@ export default [
         const hp = s.held ? { cells: rotations('S')[0], col: BCOL.S } : { cells: [[0, 0], [1, 0], [2, 0], [3, 0]], col: BCOL.I };
         for (const [r, c] of hp.cells) block(ctx, 12 + c * 4 - (s.held ? 2 : 0), 13 + r * 4, 4, hp.col);
         if (!s.held && Math.floor(tt() * 4) % 2) txt(ctx, 'TAP!', 14, 40, '#fff4e0', 8);
-        txt(ctx, 'IT WON’T FIT — SWAP IN THE HELD PIECE', 58, 96, '#fff4e0', 5);
+        txt(ctx, 'IT WON’T FIT — TAP HOLD!', 58, 96, '#fff4e0', 6);
       });
       let t0 = performance.now();
       const tt = () => (performance.now() - t0) / 1000;
