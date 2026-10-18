@@ -443,7 +443,7 @@ const games = [
         }
         if (r) { disc(ctx, r.x, r.y, 2, r.back ? '#ffe27a' : '#6b3d22'); }
         for (let i = 0; i < s.need; i++) R(ctx, 40 + i * 7, 92, 5, 4, i < s.count ? '#ffe27a' : '#6b3d22');
-        txt(ctx, 'Tap the side the rock comes from', 50, 85, '#1a1220', 8);
+        txt(ctx, 'Tap toward the rock!', 50, 85, '#1a1220', 8);
       });
     },
     async solve(b, s) {
@@ -503,7 +503,7 @@ const games = [
           disc(ctx, s.placed.x, s.placed.y, Math.round(r), '#ffe27a'); disc(ctx, s.placed.x, s.placed.y, Math.round(r * 0.6), '#fff4e0');
         }
         if (s.boom && s.ok) txt(ctx, 'A secret passage!', 50, 60, '#ffe27a', 10);
-        txt(ctx, 'Drag the bomb to the cracked wall', 50, 96, '#c9ad7f', 8);
+        txt(ctx, 'Drag the bomb to the crack', 50, 96, '#c9ad7f', 8);
       });
     },
     async solve(b, s) { await b.drag({ x: s.bx, y: s.by }, { x: s.SEG[s.crack], y: 47 }, 300, 10); },
