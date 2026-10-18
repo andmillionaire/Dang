@@ -185,13 +185,15 @@ export function mountArcade({ sfx, changed, onExit }) {
       h('span', { class: 'lb-rank' }, `#${r.rank}`),
       h('span', { class: 'lb-name' }, r.name),
       h('span', { class: 'lb-score' }, level ? fmtSecs(r.time) : `${r.levels} lv · ${fmtSecs(r.total)}`)));
-    list.replaceChildren(
+    // replaceChildren would print false/null and arrays as text, so flatten and drop the blanks
+    list.replaceChildren(...[
       !data.online && h('p', { class: 'note' }, 'Leaderboard offline. Showing this device only.'),
       rows.length ? rows : h('p', { class: 'muted center' }, level ? 'Nobody has solved this one yet.' : 'No scores yet. Be the first!'),
       data.you && !data.top.some(r => r.you) && h('div', { class: 'lb-row you' },
         h('span', { class: 'lb-rank' }, `#${data.you.rank}`), h('span', { class: 'lb-name' }, 'You'),
         h('span', { class: 'lb-score' }, level ? fmtSecs(data.you.time) : `${data.you.levels} lv · ${fmtSecs(data.you.total)}`)),
-      data.online && h('p', { class: 'muted small center' }, `${data.players} player${data.players === 1 ? '' : 's'}${level ? '' : ' · ranked by levels cleared, then total time'}`));
+      data.online && h('p', { class: 'muted small center' }, `${data.players} player${data.players === 1 ? '' : 's'}${level ? '' : ' · ranked by levels cleared, then total time'}`),
+    ].flat().filter(Boolean));
   }
 
   levels();

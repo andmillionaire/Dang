@@ -133,7 +133,7 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
     if (rush) stats.splice(0, 1, h('span', { class: 'mg-stat' }, Array.from({ length: rush.max }, (_, i) => icon(i < rush.lives ? 'heart' : 'heartOff'))),
       h('span', { class: 'mg-stat' }, `${rush.passed} / ${rush.need} orders`), rush.order && h('span', { class: 'mg-stat order' }, rush.order.text));
     if (mode === 'cats') stats.unshift(h('span', { class: 'mg-stat' }, Array.from({ length: 3 + (boost === 'tea' ? 1 : 0) }, (_, i) => icon(i < md.hearts ? 'heart' : 'heartOff'))));
-    ui.info.replaceChildren(...stats);
+    ui.info.replaceChildren(...stats.filter(Boolean));
     if (tttCells) board.forEach((m, i) => { tttCells[i].textContent = m === 'X' ? '✕' : m === 'O' ? '○' : String(i + 1); tttCells[i].className = 'pt-cell' + (m ? ' ' + m : ''); });
   }
   if (rush) newOrder();
