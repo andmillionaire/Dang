@@ -3,7 +3,8 @@ import { sleep } from '../pixel.js';
 import { CAT_BREEDS } from '../spritedata.js';
 import { mount, banner, hearts } from './common.js';
 import { WORDS3 } from './words3.js';
-import { WORDS } from './crossword.js';
+import { WORDS } from './words.js';
+import { buildSearch, lineBetween } from './wordsearch.js';
 import { rnd, pick, shuffle, at, spots, tapper, follow, runMicro, DEFAULT_TIME } from '../micro/kit.js';
 
 // The first WarioWare-style microgames (the Dang! tile's Micro Rush). The shared engine and
@@ -374,6 +375,39 @@ export const WORD_MICROS = [
     async solve(b, s) { await b.tap(byText(b, '.mc-word', s.w)); },
   },
   {
+    id: 'seek', cmd: 'Find the word!', theme: 'word', time: 6,
+    setup({ stage, win, sfx, expose }) {
+      // A tiny word search: one word hidden in a 5x5 grid. Drag across it (or tap its ends).
+      const n = 5;
+      const word = pick(W3.concat(WORDS.map(x => x.word).filter(w => w.length <= 5)));
+      const { grid, placed } = buildSearch(n, [word], [[0, 1], [1, 0], [1, 1]]);
+      const cells = grid.map(ch => h('span', { class: 'ws-cell' }, ch));
+      const board = h('div', { class: 'ws-grid mc-ws', style: `grid-template-columns:repeat(${n},1fr)` }, cells);
+      stage.append(h('p', { class: 'mc-clue' }, word), board);
+      expose({ cells, ends: [placed[0].cells[0], placed[0].cells[placed[0].cells.length - 1]] });
+      let from = -1;
+      const cellAt = e => {
+        const r = board.getBoundingClientRect();
+        const c = Math.floor(((e.clientX - r.left) / r.width) * n), rr = Math.floor(((e.clientY - r.top) / r.height) * n);
+        return c < 0 || rr < 0 || c >= n || rr >= n ? -1 : rr * n + c;
+      };
+      board.addEventListener('pointerdown', e => { e.preventDefault(); const i = cellAt(e); if (i >= 0 && from < 0) from = i; });
+      board.addEventListener('pointerup', e => {
+        const i = cellAt(e);
+        if (i < 0 || from < 0 || i === from) return;
+        const line = lineBetween(n, from, i);
+        from = -1;
+        const got = line && line.map(k => grid[k]).join('');
+        if (got === word || (got && [...got].reverse().join('') === word)) {
+          line.forEach(k => cells[k].classList.add('found'));
+          sfx('coin');
+          win();
+        } else sfx('nope');
+      });
+    },
+    async solve(b, s) { await b.drag(s.cells[s.ends[0]], s.cells[s.ends[1]], 200, 6); },
+  },
+  {
     id: 'type', cmd: 'Type it!', theme: 'word',
     setup({ stage, win, lose, sfx, expose }) {
       // Tap the letters of the word in order. One slip and it's over.
@@ -432,7 +466,7 @@ export function play(root, opts) {
   return rush(root, opts, MICROS, 'Micro Rush', 'Quick! A string of 5-second microgames. Read the command and do it before the fuse burns out.', 4 + Math.round(d * 2));
 }
 
-// Word Square + Micro Rush: rapid-fire word microgames.
+// Word Search + Micro Rush: rapid-fire word microgames.
 export function playWords(root, opts) {
   const d = opts.difficulty;
   return rush(root, opts, WORD_MICROS, 'Word Rush', 'Five-second word microgames: unscramble, fill the gap, spot the real word, answer the clue, type it out.', 5 + Math.round(d * 2));

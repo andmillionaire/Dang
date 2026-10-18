@@ -3,7 +3,7 @@ import { fitCanvas, toLogical, sleep } from '../pixel.js';
 import { PEGS, BALL, CATS } from '../sprites.js';
 import { mount, banner } from './common.js';
 import { aiMove, outcome, stormSkill } from './tictactoe.js';
-import { WORDS } from './crossword.js';
+import { WORDS } from './words.js';
 import { POOL } from '../arcade/meowdoku-levels.js';
 import { decode, REGION_COLORS } from '../meowdokuboard.js';
 import { transform } from '../meowdoku-engine.js';

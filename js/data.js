@@ -35,7 +35,7 @@ export const PLANTERS = [
 export const BOOSTS = {
   tea:     { name: 'Catnip Tea',    need: { flowers: 2, wheat: 1 }, effect: '+1 heart', games: ['mew', 'cw+mew', 'micro', 'micro+mew', 'micro+cw', 'micro+pegs'] },
   snack:   { name: 'Pumpkin Snack', need: { pumpkin: 1 }, effect: '+2 balls (+1 heart in Peg Rush)', games: ['pegs', 'pegs+ttt', 'mew+pegs', 'cw+pegs', 'micro+pegs'] },
-  toast:   { name: 'Honey Toast',   need: { wheat: 3 }, effect: '+30s in Word Square, or a bigger letter tray in Word-Tac-Toe', games: ['cw', 'cw+ttt'] },
+  toast:   { name: 'Honey Toast',   need: { wheat: 3 }, effect: '+30s in Word Search, or a bigger letter tray in Word-Tac-Toe', games: ['cw', 'cw+ttt'] },
   scarf:   { name: 'Cozy Scarf',    need: { cotton: 3 }, effect: 'The storm gets sleepy', games: ['ttt', 'pegs+ttt', 'mew+ttt', 'cw+ttt', 'micro+ttt'] },
   jam:     { name: 'Rainbow Jam',   need: { wheat: 1, cotton: 1, flowers: 1, pumpkin: 1 }, effect: 'A second chance if you lose', games: ['*'] },
 };

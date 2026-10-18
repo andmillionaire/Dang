@@ -16,7 +16,7 @@ const tierName = n => TIERS[sizeOf(n)];
 export const hintCost = n => (sizeOf(n) >= 8 ? 10 : 5);
 const reward = n => 2 + Math.floor(n / 10);
 
-const SOON = [['Star Pegs', 'sp_pegs'], ['Word Square', 'sp_cw'], ['Tic-Tac-Toe', 'sp_ttt']];
+const SOON = [['Star Pegs', 'sp_pegs'], ['Word Search', 'sp_cw'], ['Tic-Tac-Toe', 'sp_ttt']];
 
 // The arcade cabinet: pick a cartridge. Magical Mewdoku (100 levels) or DANG! Micro Mayhem.
 export function mountArcade({ sfx, changed, onExit }) {

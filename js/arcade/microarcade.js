@@ -12,6 +12,15 @@ const SPEED_EVERY = 5;
 const coinsFor = score => Math.floor(score / 3);
 const speedAt = score => Math.min(2.2, 1 + Math.floor(score / SPEED_EVERY) * 0.15);
 
+// Sections: a themed set of microgames that ends on that set's boss. Practice-style, not scored.
+export const SECTIONS = [
+  { key: 'classic', name: 'Retro Remix', themes: ['classic'], length: 10, reward: 15 },
+  { key: 'gross', name: 'Gross-Out', themes: ['gross'], length: 10, reward: 15 },
+  { key: 'cozy', name: 'Cabin Life', themes: ['cozy'], length: 10, reward: 15 },
+  { key: 'wild', name: 'Magic, Sport & Silly', themes: ['magic', 'sport', 'silly'], length: 10, reward: 15 },
+  { key: 'funtendo', name: 'Funtendo', themes: ['funtendo'], length: 14, reward: 25 },
+];
+
 // DANG! Micro Mayhem: WarioWare-style microgames back to back. Four lives, faster every five,
 // a boss every ten. Your score is how many you clear.
 export function mountMicro(root, { sfx, changed, back }) {
@@ -33,12 +42,13 @@ export function mountMicro(root, { sfx, changed, back }) {
       header(`${ALL.length} microgames`, back),
       h('div', { class: 'mm-title' },
         h('p', { class: 'mm-logo' }, h('span', {}, 'DANG!'), h('b', {}, 'Micro Mayhem')),
-        h('p', { class: 'muted center' }, 'Five-second games, back to back. Read the command, do it, don’t blink. Four lives. It speeds up every five, and every tenth is a boss.'),
+        h('p', { class: 'muted center' }, 'Five-second games, back to back. Read the command, do it, don’t blink. Endless: four lives, faster every five, a boss every tenth, high score to the leaderboard. Sections: pick a set and beat its boss.'),
         h('div', { class: 'mm-stats' },
           h('span', {}, h('b', {}, M.best), 'best'),
           h('span', {}, h('b', {}, `${seen}/${ALL.length}`), 'seen'),
           h('span', {}, h('b', {}, M.runs), 'runs')),
-        h('button', { class: 'btn big primary', onclick: run }, 'Play'),
+        h('button', { class: 'btn big primary', onclick: run }, h('span', {}, 'Endless'), h('small', {}, 'scored · leaderboard')),
+        h('button', { class: 'btn big', onclick: sections }, h('span', {}, 'Sections'), h('small', {}, 'pick a set · beat its boss')),
         h('div', { class: 'arc-tabs' },
           h('button', { class: 'seg-btn', onclick: collection }, 'Collection'),
           h('button', { class: 'seg-btn', onclick: board }, 'Leaderboard'))));
@@ -121,6 +131,91 @@ export function mountMicro(root, { sfx, changed, back }) {
     if (!score) return;
     const r = await submitHighScore(GAME, score);
     rank.textContent = r.online ? `You’re #${r.you.rank} of ${r.players}.` : 'Leaderboard offline. Saved on this device.';
+  }
+
+  // ---------- sections ----------
+  function sections() {
+    M.sections ||= {};
+    frame(
+      header('Pick a set · not scored', title),
+      h('div', { class: 'arc-scroll' },
+        SECTIONS.map(sec => {
+          const list = ALL.filter(m => sec.themes.includes(m.theme));
+          const boss = list.filter(m => m.boss);
+          const done = M.sections[sec.key];
+          return h('button', { class: 'mm-sec' + (done ? ' done' : ''), disabled: !boss.length || list.length < 3, onclick: () => runSection(sec) },
+            h('b', {}, sec.name),
+            h('small', {}, `${list.length - boss.length} games · ${boss.length} boss${boss.length === 1 ? '' : 'es'}${done ? ` · cleared ${done}×` : ''}`),
+            h('span', { class: 'mm-sec-boss' }, boss.length ? `Boss: ${boss.map(b => b.cmd).join(' / ')}` : 'Coming soon'));
+        })));
+  }
+
+  async function runSection(sec) {
+    const list = ALL.filter(m => sec.themes.includes(m.theme));
+    const boss = shuffle(list.filter(m => m.boss))[0];
+    const plan = [...shuffle(list.filter(m => !m.boss)).slice(0, sec.length), boss];
+    let lives = LIVES, quit = false;
+    const hearts = h('span', { class: 'mg-stat' });
+    const prog = h('b', { class: 'clock' });
+    const host = h('div', { class: 'mc-host' });
+    frame(header(sec.name, () => { quit = true; sections(); }), h('div', { class: 'arc-bar' }, prog, hearts), host);
+    const showLives = () => hearts.replaceChildren(...Array.from({ length: LIVES }, (_, i) => icon(i < lives ? 'heart' : 'heartOff')));
+    showLives();
+    for (let i = 0; i < plan.length && lives > 0; i++) {
+      const m = plan[i];
+      prog.textContent = m.boss ? 'BOSS' : `${i + 1} / ${plan.length - 1}`;
+      // gentle ramp: a little faster through the set
+      const speed = 1 + (i / Math.max(1, plan.length - 1)) * 0.5;
+      host.replaceChildren(h('div', { class: 'mc-inter' + (m.boss ? ' boss' : '') },
+        h('b', {}, m.boss ? 'BOSS!' : i === 0 ? 'Ready?' : 'Next!'),
+        h('div', { class: 'mc-lives' }, Array.from({ length: LIVES }, (_, k) => icon(k < lives ? 'heart' : 'heartOff'))),
+        h('span', {}, m.boss ? sec.name : `${i + 1} of ${plan.length - 1}`)));
+      sfx(m.boss ? 'alarm' : 'blip');
+      await sleep(i === 0 || m.boss ? 1100 : 700);
+      if (quit || !host.isConnected) return;
+      if (!M.seen[m.id]) { M.seen[m.id] = true; persist(); }
+      let ok = await runMicro(host, m, { sfx, speed });
+      if (quit || !host.isConnected) return;
+      if (ok) { if (!M.cleared[m.id]) { M.cleared[m.id] = true; persist(); } continue; }
+      lives--;
+      showLives();
+      // a boss you lose to can be retried while you have lives left
+      while (m.boss && !ok && lives > 0) {
+        host.replaceChildren(h('div', { class: 'mc-inter boss' }, h('b', {}, 'Again!'),
+          h('div', { class: 'mc-lives' }, Array.from({ length: LIVES }, (_, k) => icon(k < lives ? 'heart' : 'heartOff')))));
+        await sleep(1000);
+        if (quit || !host.isConnected) return;
+        ok = await runMicro(host, m, { sfx, speed });
+        if (quit || !host.isConnected) return;
+        if (!ok) { lives--; showLives(); }
+      }
+    }
+    const won = lives > 0;
+    if (won) {
+      const first = !M.sections[sec.key];
+      M.sections[sec.key] = (M.sections[sec.key] || 0) + 1;
+      const coins = first ? sec.reward * 2 : sec.reward;
+      S.coins += coins;
+      persist();
+      changed();
+      sfx('win');
+      confetti(80);
+      showModal({
+        title: `${sec.name} cleared!`, cls: 'win',
+        body: h('div', { class: 'center' },
+          h('p', {}, `You beat the boss with ${lives} heart${lives === 1 ? '' : 's'} to spare.`),
+          h('p', { class: 'reward small-reward' }, icon('coin'), ` +${coins}${first ? ' (first clear bonus!)' : ''}`)),
+        buttons: [{ label: 'Sections', onClick: sections }, { label: 'Again', cls: 'primary', onClick: () => runSection(sec) }],
+      });
+    } else {
+      sfx('tttlose');
+      showModal({
+        title: 'Out of hearts',
+        body: h('p', {}, `${sec.name} got the better of you this time.`),
+        buttons: [{ label: 'Sections', onClick: sections }, { label: 'Try again', cls: 'primary', onClick: () => runSection(sec) }],
+      });
+    }
+    sections();
   }
 
   // ---------- collection ----------

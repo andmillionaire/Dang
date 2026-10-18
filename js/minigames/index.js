@@ -1,7 +1,7 @@
 import * as ttt from './tictactoe.js';
 import * as pegs from './peggle.js';
 import * as mew from './mewdoku.js';
-import * as cw from './crossword.js';
+import * as ws from './wordsearch.js';
 import * as catTac from './cattactoe.js';
 import * as wtt from './wordtactoe.js';
 import * as micro from './micro.js';
@@ -13,7 +13,7 @@ export const GAMES = {
   ttt:  { key: 'ttt', name: 'Tic-Tac-Toe', shape: '4 in a row',      blast: 'clears its row and column', play: o => ttt.play(o.root, o) },
   pegs: { key: 'pegs', name: 'Star Pegs',   shape: '5 in a row',      blast: 'clears every tile of the most common colour', play: o => pegs.play(o.root, o) },
   mew:  { key: 'mew', name: 'Mewdoku',     shape: 'L, T or + shape', blast: 'blows up a 5×5 area', play: o => mew.play(o.root, o) },
-  cw:   { key: 'cw', name: 'Word Square', shape: '2×2 box',         blast: 'clears both diagonals', play: o => cw.play(o.root, o) },
+  cw:   { key: 'cw', name: 'Word Search', shape: '2×2 box',         blast: 'rains letters down both diagonals', play: o => ws.play(o.root, o) },
   micro: { key: 'micro', name: 'Micro Rush', shape: 'A Dang! chain reaction', blast: 'zaps a 3×3 area and lightning-strikes 8 more tiles', play: o => micro.play(o.root, o) },
 };
 

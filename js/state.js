@@ -21,7 +21,7 @@ const fresh = () => ({
   boosts: {},
   wardrobe: { owned: { casual: true }, equip: { head: null, outfit: 'casual', held: null, brooch: null } },
   stats: { miniWins: 0, blasts: 0 },
-  arcade: { owned: false, meowdoku: { unlocked: 1, best: {} }, micro: { best: 0, runs: 0, seen: {}, cleared: {} } },
+  arcade: { owned: false, meowdoku: { unlocked: 1, best: {} }, micro: { best: 0, runs: 0, seen: {}, cleared: {}, sections: {} } },
   playerId: null,
   seen: {},
   sound: true,
