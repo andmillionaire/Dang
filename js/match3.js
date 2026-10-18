@@ -1,5 +1,6 @@
 import { fitCanvas, toLogical, sleep, tween, ease } from './pixel.js';
 import { TILES, TILES_WHITE, TILES_GREY, TILE_COLORS, SPECIALS } from './sprites.js';
+import { blastFx } from './blastfx.js';
 
 const CELL = 14, PAD = 4;
 // The board grows as you progress, so its size is set per level in start().
@@ -35,6 +36,7 @@ export class Board {
     this.cover = 0;
     this.rings = [];
     this.twinkles = [];
+    this.actors = []; // themed blast effects drawn over the board (see blastfx.js)
     this.banner = null;
     this.busy = true;
     this.running = false;
@@ -455,10 +457,12 @@ export class Board {
       this.ring(at, 90, '#fff8e0');
       setTimeout(() => this.ring(at, 60, '#ffe27a'), 90);
       this.say(tiles.length > 1 ? 'Mashup!' : 'Storm Blast!');
-      tiles.forEach(t => (t.sp = null));
+      tiles.forEach(t => { t.was = t.sp; t.sp = null; });
       this.addScore(250 * tiles.length + cells.length * 15, [at], '', true);
       this.hooks.onUpdate(this);
-      await this.pop([...cells, ...where], at);
+      // each kind delivers its own blast: falling letters, a pinball, stamped marks, pouncing cats...
+      await blastFx(this, tiles.map(t => t.sp || t.was), at, cells);
+      await this.pop(where, at);
     } else {
       tiles.forEach(t => (t.dead = true));
       this.hooks.sfx('fizzle');
@@ -566,6 +570,11 @@ export class Board {
     this.floaters.push({ x: PAD + p.c * CELL + CELL / 2, y: PAD + p.r * CELL + 4, text: label ? `${label} +${pts}` : `+${pts}`, life: 1, big: big || !!label });
     this.hooks.onUpdate(this);
   }
+
+  // Geometry and helpers for blast effects.
+  geom() { return { CELL, PAD, COLS, ROWS, LW, LH, cx, cy }; }
+  tileAt(p) { return inBounds(p.r, p.c) ? this.grid[p.r][p.c] : null; }
+  colorAt(p) { const t = this.tileAt(p); return t ? (t.dead ? '#6e6878' : t.sp ? '#ffe27a' : TILE_COLORS[t.t]) : '#fff4e0'; }
 
   burst(p, color, n) {
     const cx = PAD + p.c * CELL + CELL / 2, cy = PAD + p.r * CELL + CELL / 2;
@@ -704,6 +713,7 @@ export class Board {
       ctx.lineWidth = 1 + ring.life * 2;
       ctx.beginPath(); ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2); ctx.stroke();
     }
+    for (const a of this.actors) { ctx.save(); a.draw(ctx, now); ctx.restore(); }
     for (const p of this.particles) {
       ctx.globalAlpha = Math.min(1, p.life * 1.5);
       ctx.fillStyle = p.c;
