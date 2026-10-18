@@ -1025,7 +1025,7 @@ export default [
         }
         for (const sh of s.shots) {
           sh.y -= 140 * dt;
-          if (!sh.spent && sh.y <= 28 && Math.abs(sh.x - s.bx) < 6) {
+          if (!sh.spent && sh.y <= 30 && Math.abs(sh.x - s.bx) < 6) {
             sh.spent = true;
             if (s.open) { s.hp--; hurt = 0.25; sfx('boom'); if (s.hp <= 0) return win(); }
             else sfx('land');
@@ -1051,7 +1051,7 @@ export default [
     },
     async solve(b, s) {
       while (!b.over()) {
-        const tt = (82 - 26) / 140;
+        const tt = (82 - 30) / 140;
         const aim = reflect(s.bx + s.bvx * tt, 20, 80);
         const threat = s.fire.some(f => !f.spent && f.y > 50 && f.y < 95 && Math.abs(f.x - s.hx) < 9);
         const aimSafe = !s.fire.some(f => !f.spent && f.y > 45 && f.y < 95 && Math.abs(f.x - aim) < 9);
