@@ -4,6 +4,7 @@ import { meowdokuBoard, decode } from '../meowdokuboard.js';
 import { LEVELS } from './meowdoku-levels.js';
 import { fetchBoard, submitScore, fmtSecs } from '../leaderboard.js';
 import { mountMicro } from './microarcade.js';
+import { mountStarPegs } from './starpegs.js';
 import { ALL as MICROS } from '../micro/index.js';
 
 const GAME = 'meowdoku';
@@ -16,7 +17,7 @@ const tierName = n => TIERS[sizeOf(n)];
 export const hintCost = n => (sizeOf(n) >= 8 ? 10 : 5);
 const reward = n => 2 + Math.floor(n / 10);
 
-const SOON = [['Star Pegs', 'sp_pegs'], ['Word Search', 'sp_cw'], ['Tic-Tac-Toe', 'sp_ttt']];
+const SOON = [['Word Search', 'sp_cw'], ['Tic-Tac-Toe', 'sp_ttt']];
 
 // The arcade cabinet: pick a cartridge. Magical Mewdoku (100 levels) or DANG! Micro Mayhem.
 export function mountArcade({ sfx, changed, onExit }) {
@@ -210,6 +211,10 @@ export function mountArcade({ sfx, changed, onExit }) {
           icon('girl' + ((Object.keys(A.best).length % 10)), 'ico huge'),
           h('b', {}, 'Magical Mewdoku'),
           h('small', {}, `${Object.keys(A.best).length}/${LEVEL_COUNT} levels cleared`)),
+        h('button', { class: 'cart cart-sp', onclick: () => mountStarPegs(root, { sfx, changed, back: menu }) },
+          icon('sp_pegs', 'ico huge'),
+          h('b', {}, 'Star Pegs'),
+          h('small', {}, `${Object.keys(S.arcade.pegs.best).length}/200 levels · 10 power-ups`)),
         h('button', { class: 'cart cart-mm', onclick: () => mountMicro(root, { sfx, changed, back: menu }) },
           icon('sp_micro', 'ico huge'),
           h('b', {}, 'DANG! Micro Mayhem'),

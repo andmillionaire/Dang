@@ -5,13 +5,22 @@ import * as ws from './wordsearch.js';
 import * as catTac from './cattactoe.js';
 import * as wtt from './wordtactoe.js';
 import * as micro from './micro.js';
+import { playStarPegs } from '../pegs/engine.js';
+import { levelData } from '../pegs/levels.js';
 import * as microTac from './microtac.js';
 import * as catSnap from './catsnap.js';
+
+// Star Pegs on the board: a layout picked by difficulty from the arcade's 200 levels.
+async function starPegs(o) {
+  const n = Math.max(1, Math.min(200, Math.round(1 + o.difficulty * 80 + (Math.random() - 0.5) * 20)));
+  const r = await playStarPegs(o.root, { level: levelData(n), sfx: o.sfx, extraBalls: 2 + (o.boost === 'snack' ? 2 : 0) });
+  return r.won ? 'win' : 'lose';
+}
 
 // One mini-game per charged tile. `shape` is the match that makes it.
 export const GAMES = {
   ttt:  { key: 'ttt', name: 'Tic-Tac-Toe', shape: '4 in a row',      blast: 'clears its row and column', play: o => ttt.play(o.root, o) },
-  pegs: { key: 'pegs', name: 'Star Pegs',   shape: '5 in a row',      blast: 'clears every tile of the most common colour', play: o => pegs.play(o.root, o) },
+  pegs: { key: 'pegs', name: 'Star Pegs',   shape: '5 in a row',      blast: 'clears every tile of the most common colour', play: o => starPegs(o) },
   mew:  { key: 'mew', name: 'Mewdoku',     shape: 'L, T or + shape', blast: 'blows up a 5×5 area', play: o => mew.play(o.root, o) },
   cw:   { key: 'cw', name: 'Word Search', shape: '2×2 box',         blast: 'rains letters down both diagonals', play: o => ws.play(o.root, o) },
   micro: { key: 'micro', name: 'Micro Rush', shape: 'A Dang! chain reaction', blast: 'zaps a 3×3 area and lightning-strikes 8 more tiles', play: o => micro.play(o.root, o) },

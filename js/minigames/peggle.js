@@ -2,6 +2,7 @@ import { h, icon } from '../ui.js';
 import { fitCanvas, toLogical, sleep } from '../pixel.js';
 import { PEGS, BALL, CATS } from '../sprites.js';
 import { mount, banner } from './common.js';
+import { drawBucket } from '../pegs/engine.js';
 import { aiMove, outcome, stormSkill } from './tictactoe.js';
 import { WORDS } from './words.js';
 import { POOL } from '../arcade/meowdoku-levels.js';
@@ -438,11 +439,7 @@ export function play(root, { difficulty: d, sfx, mode = 'pegs', boost }) {
       }
       if (bins) drawBins();
       else {
-        const bx = Math.round(bucketX());
-        ctx.fillStyle = '#6b3d22'; ctx.fillRect(bx - BUCKET_W / 2, 146, BUCKET_W, 6);
-        ctx.fillStyle = '#a0663a'; ctx.fillRect(bx - BUCKET_W / 2, 146, BUCKET_W, 1);
-        ctx.fillStyle = '#3a2216'; ctx.fillRect(bx - BUCKET_W / 2 + 4, 148, 1, 4); ctx.fillRect(bx + BUCKET_W / 2 - 5, 148, 1, 4);
-        if (bucketFlash > 0.05) { ctx.fillStyle = `rgba(255,226,122,${bucketFlash * 0.6})`; ctx.fillRect(bx - BUCKET_W / 2 - 2, 140, BUCKET_W + 4, 12); }
+        drawBucket(ctx, bucketX(), 145, BUCKET_W, bucketFlash);
       }
       if (md) drawGrid();
 
