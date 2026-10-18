@@ -25,7 +25,7 @@ export class Cabin {
       if (p.x >= HERO.x - 2 && p.x <= HERO.x + HW + 2 && p.y >= HERO.y - 4 && p.y <= HERO.y + 28) { this.sparkleAt = performance.now(); hooks.onHero(); }
       else if (S.arcade.owned && p.x >= 114 && p.x <= 142 && p.y >= 140 && p.y <= 200) hooks.onArcade();
       else if (p.x >= 108 && p.x <= 138 && p.y < FLOOR) hooks.onLadder();
-      else if (S.pet && Math.abs(p.x - ((S.decor.catbed ? PET_BED : PET_FIRE).x + 8)) <= 11 && Math.abs(p.y - ((S.decor.catbed ? PET_BED : PET_FIRE).y + 4)) <= 9) { this.petUntil = performance.now() + 1500; hooks.onPet(); }
+      else if (S.pet && Math.abs(p.x - ((S.decor.catbed ? PET_BED : PET_FIRE).x + 8)) <= 14 && Math.abs(p.y - ((S.decor.catbed ? PET_BED : PET_FIRE).y + 4)) <= 9) { this.petUntil = performance.now() + 1500; hooks.onPet(); }
       else if (p.x >= WX && p.x <= WX + WW && p.y >= WY && p.y <= WY + WH) this.win.strike();
     });
   }

@@ -13,15 +13,18 @@ export const petSound = () => (S.pet && S.pet.kind === 'dog' ? 'woof' : 'meow');
 // A curled-up, sleeping pet with a slow breath and drifting z's. (x, y) is the sprite's top-left.
 export function drawSleepingPet(ctx, x, y, now) {
   if (!S.pet) return;
-  const img = S.pet.kind === 'dog' ? PETS.dogSleep : PETS.catSleep;
+  const dog = S.pet.kind === 'dog';
+  const img = dog ? PETS.dogSleep : PETS.catSleep;
+  // spots are laid out for a 16x7 sprite: keep any size centred on it, feet on the same line
+  const ox = Math.round(x + 8 - img.width / 2), oy = y + 7 - img.height;
   ctx.fillStyle = 'rgba(20,10,10,0.3)';
-  ctx.fillRect(x + 1, y + img.height - 1, img.width - 2, 2);
+  ctx.fillRect(ox + 1, oy + img.height - 1, img.width - 2, 2);
   const breath = Math.floor(now / 1100) % 2;
-  ctx.drawImage(img, x, y + breath);
+  ctx.drawImage(img, ox, oy + breath);
   const z = (now / 1600) % 1;
   ctx.globalAlpha = 1 - z;
   ctx.fillStyle = '#efdcb4';
-  const zx = x + 12 + Math.round(z * 5), zy = y - 3 - Math.round(z * 9);
+  const zx = (dog ? ox + 6 : x + 12) + Math.round(z * 5), zy = oy - 3 - Math.round(z * 9);
   ctx.fillRect(zx, zy, 3, 1); ctx.fillRect(zx + 1, zy + 1, 1, 1); ctx.fillRect(zx, zy + 2, 3, 1);
   ctx.globalAlpha = 1;
 }
