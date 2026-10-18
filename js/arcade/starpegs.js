@@ -30,7 +30,7 @@ export function mountStarPegs(root, { sfx, changed, back }) {
         h('button', { class: 'seg-btn', onclick: board }, 'Leaderboard'),
         h('button', { class: 'seg-btn', onclick: powers }, 'Power-ups')),
       h('div', { class: 'arc-scroll' },
-        h('p', { class: 'muted small arc-blurb' }, 'Clear every orange peg with 10 balls. The bucket gives free balls, big shots give free balls, the purple peg is worth 500, and the two green pegs hand out power-ups.'),
+        h('p', { class: 'muted small arc-blurb' }, 'Clear every orange peg (10 balls, 12 in the first 20 levels). The bucket gives free balls, big shots give free balls, the purple peg is worth 500, and the two green pegs hand out power-ups.'),
         tiers.map(([a, b], t) => h('div', { class: 'tier' },
           h('p', { class: 'slot-label' }, `${TIER_NAMES[t]} · levels ${a}–${b}`),
           h('div', { class: 'arc-grid' }, Array.from({ length: b - a + 1 }, (_, i) => {

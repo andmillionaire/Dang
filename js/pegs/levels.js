@@ -93,6 +93,6 @@ export function levelData(n) {
     bucketSpeed: 0.55 + tier * 0.08,
     spin: tier >= 6 && n % 3 === 0 ? (n % 2 ? 1 : -1) * (0.08 + (tier - 6) * 0.02) : 0, // radians/sec, whole layout turns
     // stars: 2 at goal2 points, 3 at goal3
-    goal2: 8000 + tier * 2500, goal3: 20000 + tier * 6000,
+    goal2: 50000 + tier * 10000, goal3: 100000 + tier * 20000,
   };
 }
