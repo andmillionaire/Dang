@@ -32,7 +32,7 @@ for (const [k, m] of list.entries()) {
   if (seen.has(m.id)) problems.push('duplicate id');
   seen.add(m.id);
   if (!m.solve) problems.push('no solve()');
-  if (m.time > 15) problems.push('time > 15s');
+  if (m.time > (m.boss ? 30 : 15)) problems.push(m.boss ? 'boss time > 30s' : 'time > 15s');
   if (!m.theme) problems.push('no theme');
   const results = [];
   for (const speed of [...Array(trials).fill(1), 2]) {

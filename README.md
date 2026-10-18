@@ -128,7 +128,7 @@ Open the HTTPS site on a phone: tap **Install** (Android/Chrome) or Share → *A
 
 ### DANG! Micro Mayhem
 
-WarioWare-style microgames back to back: a one-line command, a fuse of 5 seconds (bosses up to 15), one quick task. You get four lives. It speeds up every five clears and throws a boss every tenth. Your score is how many you clear in one run, and it goes to a shared high-score leaderboard. Every microgame you meet is added to the **Collection**, where you can practise it.
+WarioWare-style microgames back to back: a one-line command, a fuse of about 5 seconds, one quick task. You get four lives. It speeds up every five clears, and every tenth is a multi-phase boss fight that can run up to 30 seconds. Your score is how many you clear in one run, and it goes to a shared high-score leaderboard. Every microgame you meet is added to the **Collection**, where you can practise it.
 
 The microgames come in themed sets: Retro Remix (quick-fire takes on classic video game challenges), Gross-Out (plunge the toilet, pick the nose...), Cabin Life, Magical, Sporty, Silly and Wordy. Each one is a small object in `js/micro/` with a `setup(api)` that builds it and a `solve(bot)` that plays it. `node tools/test_micros.mjs` (with the dev server running) plays every microgame through its own `solve()` at normal and double speed, so each one is proven winnable. The shared engine, helpers and test bot are in `js/micro/kit.js`.
 

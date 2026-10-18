@@ -9,17 +9,19 @@ import { PAL } from '../spritedata.js';
 //   id      unique kebab-case id
 //   cmd     the one-line command shown as it starts ("Plunge it!")
 //   theme   'classic' | 'gross' | 'cozy' | 'magic' | 'sport' | 'silly' | 'word'
-//   time    seconds on the fuse, default 5, never more than 15
-//   boss    a longer showpiece; the arcade puts one every 10th stage
+//   time    seconds on the fuse, default 5, never more than 15 (bosses up to 30)
+//   boss    a longer multi-phase showpiece; the arcade puts one every 10th stage
 //   timeoutWins  surviving until the fuse runs out is the win ("Don't touch!")
 //   setup(api)   builds the game inside api.stage and calls api.win() / api.lose()
 //   solve(bot, state)  plays it to a win; the test harness uses it to prove every game is winnable
 //
 // api: { stage, speed, sfx, time, win(), lose(), frame(fn(dt, t)), pos(e) -> {x, y} in stage %,
-//        expose(obj) -> obj handed to solve() as `state`, over() -> true once decided }
+//        expose(obj) -> obj handed to solve() as `state`, over() -> true once decided,
+//        phase(n, title) -> flashes a "PHASE n" banner, for bosses moving to their next stage }
 
 export const DEFAULT_TIME = 5;
 export const MAX_TIME = 15;
+export const BOSS_MAX_TIME = 30;
 
 export const rnd = n => (Math.random() * n) | 0;
 export const pick = a => a[rnd(a.length)];
@@ -125,7 +127,8 @@ export function addStyle(id, cssText) {
 // Resolves true (won) or false. speed >= 1 makes things faster and trims the fuse a little.
 // autoplay runs the micro's own solve() (the test harness and the attract demo use this).
 export function runMicro(host, m, { sfx = () => {}, speed = 1, autoplay = false } = {}) {
-  const time = Math.min(MAX_TIME, (m.time || DEFAULT_TIME) / (1 + (speed - 1) * 0.35));
+  // Faster speeds trim the fuse; bosses only half as much, since their phases need room.
+  const time = Math.min(m.boss ? BOSS_MAX_TIME : MAX_TIME, (m.time || DEFAULT_TIME) / (1 + (speed - 1) * (m.boss ? 0.18 : 0.35)));
   const stage = h('div', { class: 'mc-stage mcs-' + m.id });
   const fuse = h('div', { class: 'mc-fuse' }, h('i'));
   const box = h('div', { class: 'mc-box' }, stage, h('div', { class: 'mc-cmd' }, m.cmd));
@@ -152,6 +155,14 @@ export function runMicro(host, m, { sfx = () => {}, speed = 1, autoplay = false 
       win: () => end(true), lose: () => end(false), over: () => over,
       frame: fn => frames.push(fn),
       expose: obj => (exposed = obj),
+      phase: (n, title = '') => {
+        if (over) return;
+        box.querySelector('.mc-phase')?.remove();
+        const el = h('div', { class: 'mc-phase' }, h('b', {}, `PHASE ${n}`), title && h('span', {}, title));
+        box.append(el);
+        sfx('alarm');
+        setTimeout(() => el.remove(), 1400);
+      },
     };
     try { m.setup(api); } catch (err) { console.error('micro setup failed', m.id, err); }
     const loop = now => {
