@@ -745,3 +745,38 @@ div.word-slots b.on { background: var(--gold); animation: placeIn .3s cubic-bezi
 .md-tray-slot { width: 36px; height: 36px; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--ink); transition: opacity .2s, transform .2s; }
 .md-tray-slot .ico { width: 82%; height: 82%; }
 .md-tray-slot.used { opacity: .25; transform: scale(.85); }
+
+/* ---------- arcade cartridges and Micro Mayhem ---------- */
+.mc-spr { image-rendering: pixelated; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.mc-canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.mc.boss .mc-fuse i { background: linear-gradient(90deg, #c0507a, #f08ab0); }
+.mc.boss .mc-stage { box-shadow: inset 0 0 0 3px #f08ab0; }
+.mc-inter.boss b { color: #f08ab0; animation: placeIn .35s cubic-bezier(.3, 1.8, .5, 1), blink .4s steps(2) 3; }
+.carts { flex: 1; display: grid; gap: 12px; align-content: center; }
+.cart {
+  border: 0; cursor: pointer; font: inherit; color: var(--cream); padding: 16px 14px; display: grid; justify-items: center; gap: 4px;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, .35), inset 0 0 0 3px rgba(255, 255, 255, .12);
+}
+.cart b { font-size: 28px; font-weight: 400; }
+.cart small { font-size: 17px; opacity: .85; }
+.cart .ico.huge { width: 64px; height: 64px; }
+.cart-md { background: linear-gradient(160deg, #5a3a7a, #3a2a5c); }
+.cart-mm { background: linear-gradient(160deg, #c8792e, #8e3a2a); }
+.cart:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0, 0, 0, .35); }
+.mm-title { flex: 1; display: grid; gap: 14px; align-content: center; justify-items: stretch; }
+.mm-logo { margin: 0; text-align: center; display: grid; line-height: .9; }
+.mm-logo span { font-size: 64px; color: var(--gold); text-shadow: 4px 4px 0 #8e3a2a; animation: placeIn .5s cubic-bezier(.3, 1.8, .5, 1); }
+.mm-logo b { font-size: 34px; color: #f8b0d4; font-weight: 400; text-shadow: 3px 3px 0 #6a3e94; }
+.mm-stats { display: flex; justify-content: center; gap: 22px; }
+.mm-stats span { display: grid; justify-items: center; color: var(--muted); font-size: 16px; }
+.mm-stats b { font-size: 30px; color: var(--cream); font-weight: 400; }
+.mm-big { font-size: 64px; color: var(--gold); margin: 0; line-height: 1; }
+.mm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 5px; }
+.mm-card { min-height: 44px; border: 0; font: inherit; font-size: 15px; line-height: 1.05; padding: 4px; background: #241838; color: #6a5a7a; cursor: pointer; }
+.mm-card.seen { background: #3a2a5c; color: var(--cream); }
+.mm-card.done { background: #5a3a7a; color: var(--gold); }
+.mm-card.boss.seen, .mm-card.boss.done { box-shadow: inset 0 0 0 2px #f08ab0; }
+.mm-card:disabled { cursor: default; }
+.mm-after { display: flex; gap: 10px; justify-content: center; }
+.micro-arc .mc-host { flex: 1; justify-content: center; }
+#modal .mm-big { font-size: 64px; color: var(--gold); margin: 4px 0; }

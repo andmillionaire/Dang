@@ -3,24 +3,87 @@ import { sleep } from '../pixel.js';
 import { mount, banner } from './common.js';
 import { keyboard } from './keyboard.js';
 
-// Word squares: row n reads the same as column n, so each clue answers both.
+// Double word squares: every row and every column is a different word, each with its own clue.
+// `across` are the rows top to bottom, `down` the columns left to right.
 export const PUZZLES = [
-  { rows: ['CARD', 'AREA', 'REAR', 'DART'], clues: ['Birthday greeting you might mail', 'Length times width', 'Back end', 'Pub game projectile'] },
-  { rows: ['BALM', 'AREA', 'LEND', 'MADE'], clues: ['Soothing lip ointment', 'Region or zone', 'Let a friend borrow', 'Crafted by hand'] },
-  { rows: ['RAIN', 'ALOE', 'IOTA', 'NEAT'], clues: ['It never stops falling outside', 'Soothing succulent', 'Tiny bit, or a Greek letter', 'Tidy'] },
-  { rows: ['TEAS', 'EARL', 'ARIA', 'SLAP'], clues: ['Chamomile and oolong', '___ Grey (a cuppa)', 'Opera solo', '___stick comedy'] },
-  { rows: ['LAMP', 'AREA', 'MEAL', 'PALE'], clues: ['Light beside the armchair', 'Square footage', 'Breakfast or supper', 'Wan, like a rainy sky'] },
-  { rows: ['HEART', 'EMBER', 'ABUSE', 'RESIN', 'TREND'], clues: ['Shape of a magical brooch', 'Glowing bit in the fireplace', 'Misuse', 'Sticky pine sap', 'Passing fad'] },
+  {
+    across: [['WALK', 'Stroll around the cabin'], ['ICON', 'Little picture on a phone screen'], ['PINE', 'Evergreen outside the window'], ['EDGE', 'Rim or brink']],
+    down: [['WIPE', 'Clean the foggy window'], ['ACID', 'Lemon juice has some'], ['LONG', 'Not short, like a rainy night'], ['KNEE', 'Joint you kneel on']],
+  },
+  {
+    across: [['PLOT', 'Garden patch for planting'], ['LOVE', 'Cozy feeling for your pet'], ['USES', 'Puts to work'], ['SENT', 'Mailed off']],
+    down: [['PLUS', 'Addition sign'], ['LOSE', 'Opposite of win'], ['OVEN', 'It bakes the bread'], ['TEST', 'Exam or trial']],
+  },
+  {
+    across: [['CLUB', 'Book ___ or golf ___'], ['ROSE', 'Thorny red bloom'], ['EVEN', 'Not odd'], ['WEST', 'Where the sun sets']],
+    down: [['CREW', "A ship's team"], ['LOVE', 'Zero, in tennis'], ['USES', 'Puts to work'], ['BENT', 'Not straight']],
+  },
+  {
+    across: [['PATH', 'Trail through the woods'], ['ECHO', 'Sound bouncing off the hills'], ['TRIO', 'Group of three'], ['SEND', 'Mail off']],
+    down: [['PETS', 'Cats and dogs at home'], ['ACRE', 'Unit of farmland'], ['THIN', 'Not thick'], ['HOOD', "A cape's head covering"]],
+  },
+  {
+    across: [['THEN', 'After that'], ['HIDE', 'Play ___-and-seek'], ['URGE', 'Strong desire'], ['SEED', 'Plant it to grow a crop']],
+    down: [['THUS', 'Therefore'], ['HIRE', 'Give a job to'], ['EDGE', 'Brink'], ['NEED', 'Must have']],
+  },
+  {
+    across: [['EDIT', 'Revise a draft'], ['PACE', 'Walking speed'], ['IRON', 'Press the laundry'], ['CENT', 'A penny']],
+    down: [['EPIC', 'Legendary, like a quest'], ['DARE', 'Truth or ___'], ['ICON', 'Little picture on a screen'], ['TENT', 'Camping shelter']],
+  },
+  {
+    across: [['SLOW', 'Like a snail'], ['POPE', 'Leader in the Vatican'], ['OVEN', 'It bakes the bread'], ['TENT', 'Camping shelter']],
+    down: [['SPOT', 'Dot, or notice'], ['LOVE', 'Zero, in tennis'], ['OPEN', 'Not shut'], ['WENT', 'Left; departed']],
+  },
+  {
+    across: [['WOLF', 'Howls at the moon'], ['OVER', 'Finished'], ['RAGE', 'Fury'], ['ELSE', 'Otherwise']],
+    down: [['WORE', 'Had on, like a scarf'], ['OVAL', 'Egg shape'], ['LEGS', 'A table has four'], ['FREE', 'No charge']],
+  },
+  {
+    across: [['HELP', 'Cry for assistance'], ['OVAL', 'Egg shape'], ['MENU', 'List at a diner'], ['ENDS', 'Finishes']],
+    down: [['HOME', 'Where the heart is'], ['EVEN', 'Level; not odd'], ['LAND', 'Touch down'], ['PLUS', 'Addition sign']],
+  },
+  {
+    across: [['PAST', 'Bygone days'], ['ECHO', 'Sound that bounces back'], ['TRUE', 'Not false'], ['SETS', 'Tennis matches have them']],
+    down: [['PETS', 'Cats and dogs at home'], ['ACRE', 'Unit of farmland'], ['SHUT', 'Closed'], ['TOES', 'Ten little piggies']],
+  },
+  {
+    across: [['TELL', 'Share a story'], ['IDEA', 'Bright thought'], ['EGGS', 'Breakfast from the hens'], ['REST', 'Take a nap']],
+    down: [['TIER', 'Layer of a cake'], ['EDGE', 'Brink'], ['LEGS', 'A table has four'], ['LAST', 'Final']],
+  },
+  {
+    across: [['STIR', 'Mix the soup'], ['WIDE', 'Broad'], ['IRON', 'Press the laundry'], ['MELT', 'What snow does in spring']],
+    down: [['SWIM', 'Paddle in the lake'], ['TIRE', "A wheel's rubber"], ['IDOL', 'Pop star'], ['RENT', 'Monthly cabin payment']],
+  },
+  {
+    across: [['DEAR', 'Start of a letter'], ['RARE', 'Hard to find'], ['USES', 'Puts to work'], ['MEAT', 'Stew ingredient']],
+    down: [['DRUM', 'Marching band beat'], ['EASE', 'Comfort'], ['AREA', 'Length times width'], ['REST', 'Take a nap']],
+  },
+  {
+    across: [['GHOST', 'Sheet-wearing spook'], ['REPLY', 'Answer a letter'], ['ALTAR', 'Front of a wedding chapel'], ['SLICE', 'Piece of pie'], ['SOCKS', 'Toasty foot warmers']],
+    down: [['GRASS', 'Lawn'], ['HELLO', 'Phone greeting'], ['OPTIC', 'Relating to the eye'], ['SLACK', 'Loose, not taut'], ['TYRES', "Wheels' rubber, British-style"]],
+  },
+  {
+    across: [['GRADE', 'School mark'], ['LOVED', 'Adored'], ['AMONG', 'In the middle of'], ['RAISE', 'Lift up'], ['ENDED', 'Finished']],
+    down: [['GLARE', 'Angry stare'], ['ROMAN', '___ numerals, like IV'], ['AVOID', 'Steer clear of'], ['DENSE', 'Thick, like fog'], ['EDGED', "Trimmed the lawn's border"]],
+  },
+  {
+    across: [['GRAFT', 'Join a cutting onto a plant'], ['RULER', 'Queen or king'], ['ALONE', 'By yourself in the cabin'], ['PENCE', 'British pennies'], ['EDGES', 'Borders']],
+    down: [['GRAPE', 'Vine fruit'], ['RULED', 'Lined, like notebook paper'], ['ALONG', 'Come ___ for the ride'], ['FENCE', 'Garden border'], ['TREES', 'Forest giants']],
+  },
+  {
+    across: [['CAVES', 'Bat homes'], ['ALIVE', 'Living'], ['SPREE', 'Shopping ___'], ['THANK', 'Show gratitude to'], ['SALTS', 'Bath ___']],
+    down: [['CASTS', 'Spells a wizard ___'], ['ALPHA', 'First Greek letter'], ['VIRAL', 'Spreading fast online'], ['EVENT', 'Special occasion'], ['SEEKS', 'Looks for']],
+  },
 ];
 
 // Every answer/clue pair, de-duplicated, for the word mashups.
-export const WORDS = [...new Map(PUZZLES.flatMap(p => p.rows.map((w, i) => [w, { word: w, clue: p.clues[i] }]))).values()];
+export const WORDS = [...new Map(PUZZLES.flatMap(p => [...p.across, ...p.down].map(([w, clue]) => [w, { word: w, clue }]))).values()];
 
 export function play(root, { difficulty: d, sfx, boost }) {
-  const pool = PUZZLES.filter(p => d > 0.45 || p.rows.length === 4);
+  const pool = PUZZLES.filter(p => d > 0.45 || p.across.length === 4);
   const P = pool[(Math.random() * pool.length) | 0];
-  const n = P.rows.length;
-  const answer = P.rows.join('');
+  const n = P.across.length;
+  const answer = P.across.map(([w]) => w).join('');
   const grid = Array(n * n).fill('');
   const given = new Set();
   const prefill = Math.round(3 * (1 - d));
@@ -30,7 +93,7 @@ export function play(root, { difficulty: d, sfx, boost }) {
   const limit = ((n === 4 ? 100 - 30 * d : 150 - 40 * d) + (boost === 'toast' ? 30 : 0)) * 1000;
   let left = limit, sel = [...Array(n * n).keys()].find(i => !given.has(i)) ?? 0, dir = 'across', done = false;
 
-  const ui = mount(root, { title: 'Word Square', tip: 'Every row matches its column. Fill the square before time runs out.' });
+  const ui = mount(root, { title: 'Word Square', tip: 'Every row and every column is a word, each with its own clue. Fill the square before time runs out.' });
   const bar = h('div', { class: 'timebar' }, h('i'));
   const clue = h('p', { class: 'cw-clue' });
   // Buttons are built before the game's handlers exist; they forward through `act`.
@@ -55,7 +118,7 @@ export function play(root, { difficulty: d, sfx, boost }) {
       c.classList.toggle('word', w.includes(i));
     });
     const idx = dir === 'across' ? (sel / n) | 0 : sel % n;
-    clue.replaceChildren(h('b', {}, `${idx + 1} ${dir === 'across' ? 'Across' : 'Down'}`), ` ${P.clues[idx]}`);
+    clue.replaceChildren(h('b', {}, `${idx + 1} ${dir === 'across' ? 'Across' : 'Down'}`), ` ${P[dir][idx][1]}`);
   };
   render();
   ui.status('Tap a square twice to switch between across and down.');

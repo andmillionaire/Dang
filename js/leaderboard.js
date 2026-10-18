@@ -51,4 +51,27 @@ export async function submitScore(game, level, time) {
   }
 }
 
+// High-score games (the micro arcade): one best score per player.
+function localScores(game) {
+  const best = (S.arcade[game] || {}).best || 0;
+  const me = S.hero ? S.hero.name : 'You';
+  return { online: false, top: best ? [{ rank: 1, name: me, score: best, you: true }] : [], you: best ? { rank: 1, score: best } : null, players: best ? 1 : 0 };
+}
+
+export async function fetchScores(game) {
+  try {
+    return { online: true, ...(await api(`api/leaderboard?${new URLSearchParams({ game, player: playerId() })}`)) };
+  } catch {
+    return localScores(game);
+  }
+}
+
+export async function submitHighScore(game, score) {
+  try {
+    return { online: true, ...(await api('api/scores', { method: 'POST', body: JSON.stringify({ game, score, player: playerId(), name: S.hero ? S.hero.name : 'Anonymous' }) })) };
+  } catch {
+    return localScores(game);
+  }
+}
+
 export const fmtSecs = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;

@@ -1,46 +1,28 @@
-import { h, icon, sparkle } from '../ui.js';
+import { h, icon } from '../ui.js';
 import { sleep } from '../pixel.js';
 import { CAT_BREEDS } from '../spritedata.js';
 import { mount, banner, hearts } from './common.js';
 import { WORDS3 } from './words3.js';
 import { WORDS } from './crossword.js';
+import { rnd, pick, shuffle, at, spots, tapper, follow, runMicro, DEFAULT_TIME } from '../micro/kit.js';
 
-// WarioWare-style microgames: a one-line command, a 5-second fuse, one simple task.
-// Each micro has setup(api); api.win()/api.lose() end it early, and when the fuse runs out
-// it counts as a loss unless the micro sets timeoutWins (the "don't do anything" ones).
-export const TIME = 5;
+// The first WarioWare-style microgames (the Dang! tile's Micro Rush). The shared engine and
+// helpers live in ../micro/kit.js; the arcade's big collection lives in ../micro/.
+export { runMicro };
+export const TIME = DEFAULT_TIME;
 
-const rnd = n => (Math.random() * n) | 0;
-const pick = a => a[rnd(a.length)];
-const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const ITEMS = ['wheat', 'cotton', 'flowers', 'pumpkin', 'coin', 'star', 'heart', 'shard'];
-
-// Put an element at (x, y) percent of the stage, centred.
-const at = (el, x, y) => { el.classList.add('mc-pos'); el.style.left = x + '%'; el.style.top = y + '%'; return el; };
-
-// n random spots at least `gap` percent apart, inside a margin.
-function spots(n, gap = 20, m = 12, top = m) {
-  const out = [];
-  for (let tries = 0; out.length < n && tries < 600; tries++) {
-    const p = { x: m + Math.random() * (100 - 2 * m), y: top + Math.random() * (100 - top - m) };
-    if (out.every(q => Math.hypot(q.x - p.x, q.y - p.y) >= gap)) out.push(p);
-  }
-  while (out.length < n) out.push({ x: m + Math.random() * (100 - 2 * m), y: top + Math.random() * (100 - top - m) });
-  return out;
-}
-
-// A tap target: fires on pointerdown so fast taps feel instant.
-const tapper = (el, fn) => { el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); fn(e); }); return el; };
 
 function drop(stage, x, y) {
   const d = at(h('i', { class: 'mc-drop' }), x, y);
+  d.x = x; d.y = y;
   stage.append(d);
   return d;
 }
 
 export const MICROS = [
   {
-    id: 'patch', cmd: 'Patch it!',
+    id: 'patch', cmd: 'Patch it!', theme: 'cozy',
     setup({ stage, win, sfx, speed, frame }) {
       // Leaks spring open in the cabin roof one after another. Tape every one.
       const total = 3 + Math.round(speed);
@@ -61,9 +43,12 @@ export const MICROS = [
         sfx('drip');
       });
     },
+    async solve(b) {
+      while (!b.over()) { const l = b.q('.mc-leak:not(.fixed)'); if (l) await b.tap(l); else await b.wait(40); }
+    },
   },
   {
-    id: 'pop', cmd: 'Pop ’em!',
+    id: 'pop', cmd: 'Pop ’em!', theme: 'cozy',
     setup({ stage, win, sfx, speed, frame }) {
       const n = 5 + Math.round(speed * 1.5);
       let popped = 0;
@@ -82,26 +67,34 @@ export const MICROS = [
       });
       frame(dt => bubbles.forEach(b => { b.y += b.vy * dt; if (b.y < 6) b.y = 94; b.style.top = b.y + '%'; }));
     },
+    async solve(b) {
+      while (!b.over()) { const x = b.q('.mc-bubble:not(.popped)'); if (x) await b.tap(x); else await b.wait(30); }
+    },
   },
   {
-    id: 'stop', cmd: 'Stop!',
-    setup({ stage, win, lose, sfx, speed, frame }) {
+    id: 'stop', cmd: 'Stop!', theme: 'silly',
+    setup({ stage, win, lose, sfx, speed, frame, expose }) {
       // A needle sweeps the gauge; tap while it's in the gold.
       const w = Math.max(10, 24 - speed * 7), zx = 10 + Math.random() * (80 - w);
       const needle = h('i', { class: 'mc-needle' });
       stage.append(h('div', { class: 'mc-gauge' }, h('i', { class: 'mc-zone', style: `left:${zx}%;width:${w}%` }), needle),
         h('p', { class: 'mc-note' }, 'Tap anywhere when the needle is in the gold'));
-      let p = 0, dir = 1;
+      const s = expose({ p: 0, zx, w });
+      let dir = 1;
       frame(dt => {
-        p += dir * 75 * speed * dt;
-        if (p > 100) { p = 100; dir = -1; } else if (p < 0) { p = 0; dir = 1; }
-        needle.style.left = p + '%';
+        s.p += dir * 75 * speed * dt;
+        if (s.p > 100) { s.p = 100; dir = -1; } else if (s.p < 0) { s.p = 0; dir = 1; }
+        needle.style.left = s.p + '%';
       });
-      tapper(stage, () => { sfx('select'); p >= zx && p <= zx + w ? win() : lose(); });
+      tapper(stage, () => { sfx('select'); s.p >= zx && s.p <= zx + w ? win() : lose(); });
+    },
+    async solve(b, s) {
+      await b.until(() => Math.abs(s.p - (s.zx + s.w / 2)) < s.w * 0.25);
+      await b.tap({ x: 50, y: 20 });
     },
   },
   {
-    id: 'stoke', cmd: 'Stoke it!',
+    id: 'stoke', cmd: 'Stoke it!', theme: 'cozy',
     setup({ stage, win, sfx, speed, frame }) {
       // Tap like mad to get the fire roaring before it dies down.
       const need = 9 + Math.round(speed * 4);
@@ -112,23 +105,26 @@ export const MICROS = [
       tapper(stage, () => { heat++; sfx('tap'); show(); if (heat >= need) win(); });
       frame(dt => { heat = Math.max(0, heat - dt * 1.1 * speed); show(); });
     },
+    async solve(b) { while (!b.over()) await b.tap({ x: 50, y: 50 }); },
   },
   {
-    id: 'odd', cmd: 'Find it!',
-    setup({ stage, win, lose, sfx, speed }) {
+    id: 'odd', cmd: 'Find it!', theme: 'cozy',
+    setup({ stage, win, lose, sfx, speed, expose }) {
       // One cat is a different breed from the rest.
       const n = speed > 1.3 ? 5 : 4;
       const a = rnd(CAT_BREEDS.length);
       let b = rnd(CAT_BREEDS.length - 1); if (b >= a) b++;
       const odd = rnd(n * n);
-      stage.append(h('div', { class: 'mc-grid', style: `grid-template-columns:repeat(${n},1fr)` },
-        Array.from({ length: n * n }, (_, i) => tapper(h('button', { type: 'button', class: 'mc-pick' }, icon('cat' + (i === odd ? b : a), 'ico cat')),
-          () => { sfx(i === odd ? 'mew' : 'nope'); i === odd ? win() : lose(); }))));
+      const picks = Array.from({ length: n * n }, (_, i) => tapper(h('button', { type: 'button', class: 'mc-pick' }, icon('cat' + (i === odd ? b : a), 'ico cat')),
+        () => { sfx(i === odd ? 'mew' : 'nope'); i === odd ? win() : lose(); }));
+      stage.append(h('div', { class: 'mc-grid', style: `grid-template-columns:repeat(${n},1fr)` }, picks));
+      expose({ el: picks[odd] });
     },
+    async solve(b, s) { await b.tap(s.el); },
   },
   {
-    id: 'count', cmd: 'How many?',
-    setup({ stage, win, lose, sfx, speed, frame }) {
+    id: 'count', cmd: 'How many?', theme: 'cozy',
+    setup({ stage, win, lose, sfx, speed, frame, expose }) {
       const k = 3 + rnd(3 + Math.round(speed * 2));
       const it = pick(ITEMS);
       const things = spots(k, 14, 10, 8).map(p => {
@@ -139,107 +135,127 @@ export const MICROS = [
       });
       frame((dt, t) => things.forEach(el => at(el, el.p.x + Math.sin(t * 2 * speed + el.p.a) * 4, el.p.y + Math.cos(t * 1.6 * speed + el.p.a) * 3)));
       const opts = shuffle([...new Set([k, k + 1, k - 1 > 0 ? k - 1 : k + 2])]);
-      stage.append(h('div', { class: 'mc-answers' }, opts.map(v => tapper(h('button', { type: 'button', class: 'btn' }, String(v)),
-        () => { sfx(v === k ? 'coin' : 'nope'); v === k ? win() : lose(); }))));
+      const btns = opts.map(v => tapper(h('button', { type: 'button', class: 'btn' }, String(v)), () => { sfx(v === k ? 'coin' : 'nope'); v === k ? win() : lose(); }));
+      stage.append(h('div', { class: 'mc-answers' }, btns));
+      expose({ el: btns[opts.indexOf(k)] });
     },
+    async solve(b, s) { await b.wait(300); await b.tap(s.el); },
   },
   {
-    id: 'catch', cmd: 'Catch!',
-    setup({ stage, win, lose, sfx, speed, frame, pos }) {
+    id: 'catch', cmd: 'Catch!', theme: 'cozy',
+    setup({ stage, win, lose, sfx, speed, frame, pos, expose }) {
       // Slide the bucket under every drip from the leaky roof.
       const bucket = at(h('i', { class: 'mc-bucket' }), 50, 90);
       stage.append(bucket);
-      let bx = 50;
-      const follow = e => { bx = Math.max(8, Math.min(92, pos(e).x)); at(bucket, bx, 90); };
-      stage.addEventListener('pointerdown', e => { stage.setPointerCapture?.(e.pointerId); follow(e); });
-      stage.addEventListener('pointermove', follow);
+      const s = expose({ bx: 50, drops: [] });
+      follow(stage, pos, p => { s.bx = Math.max(8, Math.min(92, p.x)); at(bucket, s.bx, 90); });
       const times = [0.3, 1.45, 2.6].map(t => t / Math.sqrt(speed));
-      const drops = [];
       let caught = 0, spawned = 0;
       frame((dt, t) => {
         if (spawned < times.length && t >= times[spawned]) {
           spawned++;
-          const d = drop(stage, 10 + Math.random() * 80, -4);
-          d.x = parseFloat(d.style.left); d.y = -4;
-          drops.push(d);
+          s.drops.push(drop(stage, 10 + Math.random() * 80, -4));
           sfx('drip');
         }
-        for (const d of drops) {
+        for (const d of s.drops) {
           if (d.done) continue;
           d.y += (48 + 22 * speed) * dt;
           d.style.top = d.y + '%';
-          if (d.y >= 84 && d.y < 94 && Math.abs(d.x - bx) < 11) {
+          if (d.y >= 84 && d.y < 94 && Math.abs(d.x - s.bx) < 11) {
             d.done = true; d.remove(); sfx('coin');
             if (++caught === times.length) win();
           } else if (d.y > 100) { d.done = true; lose(); }
         }
       });
     },
+    async solve(b, s) {
+      b.down({ x: 50, y: 90 });
+      while (!b.over()) {
+        const d = s.drops.filter(d => !d.done).sort((p, q) => q.y - p.y)[0];
+        if (d) b.move({ x: d.x, y: 90 });
+        await b.wait(30);
+      }
+      b.up({ x: 50, y: 90 });
+    },
   },
   {
-    id: 'dodge', cmd: 'Stay dry!', timeoutWins: true,
-    setup({ stage, lose, sfx, speed, frame, pos }) {
+    id: 'dodge', cmd: 'Stay dry!', theme: 'cozy', timeoutWins: true,
+    setup({ stage, lose, sfx, speed, frame, pos, time, expose }) {
       // You're the cat: slide left and right so no raindrop lands on you.
       const me = at(h('span', { class: 'mc-me' }, icon('cat', 'ico')), 50, 88);
       stage.append(me);
-      let mx = 50, next = 0.3;
-      const follow = e => { mx = Math.max(8, Math.min(92, pos(e).x)); at(me, mx, 88); };
-      stage.addEventListener('pointerdown', e => { stage.setPointerCapture?.(e.pointerId); follow(e); });
-      stage.addEventListener('pointermove', follow);
-      const drops = [];
+      const s = expose({ mx: 50, drops: [] });
+      let next = 0.3;
+      follow(stage, pos, p => { s.mx = Math.max(8, Math.min(92, p.x)); at(me, s.mx, 88); });
       frame((dt, t) => {
-        if (t >= next && t < TIME - 0.6) {
+        if (t >= next && t < time - 0.6) {
           next = t + 0.42 / speed;
-          const x = Math.random() < 0.5 ? mx + (Math.random() - 0.5) * 20 : 6 + Math.random() * 88;
-          const d = drop(stage, Math.max(5, Math.min(95, x)), -4);
-          d.x = parseFloat(d.style.left); d.y = -4;
-          drops.push(d);
+          const x = Math.random() < 0.5 ? s.mx + (Math.random() - 0.5) * 20 : 6 + Math.random() * 88;
+          s.drops.push(drop(stage, Math.max(5, Math.min(95, x)), -4));
         }
-        for (const d of drops) {
+        for (const d of s.drops) {
           if (d.done) continue;
           d.y += (55 + 25 * speed) * dt;
           d.style.top = d.y + '%';
-          if (d.y > 80 && d.y < 94 && Math.abs(d.x - mx) < 7) { d.done = true; sfx('drip'); me.classList.add('wet'); lose(); }
+          if (d.y > 80 && d.y < 94 && Math.abs(d.x - s.mx) < 7) { d.done = true; sfx('drip'); me.classList.add('wet'); lose(); }
           else if (d.y > 104) { d.done = true; d.remove(); }
         }
       });
     },
-  },
-  {
-    id: 'swat', cmd: 'Swat!',
-    setup({ stage, win, sfx, speed, frame, pos }) {
-      const fly = at(h('i', { class: 'mc-fly' }), 50, 50);
-      stage.append(fly);
-      let x = 50, y = 50, tx = 50, ty = 50;
-      frame(dt => {
-        if (Math.hypot(tx - x, ty - y) < 3) { tx = 10 + Math.random() * 80; ty = 10 + Math.random() * 80; }
-        const d = Math.hypot(tx - x, ty - y), v = 55 * speed * dt;
-        x += ((tx - x) / d) * v; y += ((ty - y) / d) * v;
-        at(fly, x + (Math.random() - 0.5) * 2, y + (Math.random() - 0.5) * 2);
-      });
-      tapper(stage, e => {
-        const p = pos(e);
-        if (Math.hypot(p.x - x, p.y - y) < 11) { fly.classList.add('splat'); sfx('pop'); win(); } else sfx('tap');
-      });
+    async solve(b, s) {
+      b.down({ x: 50, y: 88 });
+      while (!b.over()) {
+        // stand where the nearest threatening drop is furthest away
+        const threat = s.drops.filter(d => !d.done && d.y > 30 && d.y < 94);
+        let best = s.mx, bestScore = -1;
+        for (let x = 8; x <= 92; x += 4) {
+          const sc = Math.min(100, ...threat.map(d => Math.abs(d.x - x))) - Math.abs(x - s.mx) * 0.05;
+          if (sc > bestScore) { bestScore = sc; best = x; }
+        }
+        b.move({ x: best, y: 88 });
+        await b.wait(30);
+      }
+      b.up({ x: s.mx, y: 88 });
     },
   },
   {
-    id: 'shh', cmd: 'Shh!', timeoutWins: true,
+    id: 'swat', cmd: 'Swat!', theme: 'silly',
+    setup({ stage, win, sfx, speed, frame, pos, expose }) {
+      const fly = at(h('i', { class: 'mc-fly' }), 50, 50);
+      stage.append(fly);
+      const s = expose({ x: 50, y: 50 });
+      let tx = 50, ty = 50;
+      frame(dt => {
+        if (Math.hypot(tx - s.x, ty - s.y) < 3) { tx = 10 + Math.random() * 80; ty = 10 + Math.random() * 80; }
+        const d = Math.hypot(tx - s.x, ty - s.y), v = 55 * speed * dt;
+        s.x += ((tx - s.x) / d) * v; s.y += ((ty - s.y) / d) * v;
+        at(fly, s.x + (Math.random() - 0.5) * 2, s.y + (Math.random() - 0.5) * 2);
+      });
+      tapper(stage, e => {
+        const p = pos(e);
+        if (Math.hypot(p.x - s.x, p.y - s.y) < 11) { fly.classList.add('splat'); sfx('pop'); win(); } else sfx('tap');
+      });
+    },
+    async solve(b, s) { while (!b.over()) { await b.tap({ x: s.x, y: s.y }); await b.wait(80); } },
+  },
+  {
+    id: 'shh', cmd: 'Shh!', theme: 'cozy', timeoutWins: true,
     setup({ stage, lose, sfx }) {
       // The pet is napping. Whatever you do, don't touch anything.
       stage.append(h('div', { class: 'mc-nap' }, icon('cat', 'ico'), h('b', {}, 'z'), h('b', {}, 'z'), h('b', {}, 'Z')),
         h('button', { type: 'button', class: 'btn mc-tempt' }, 'Boop?'));
       tapper(stage, () => { sfx('meow'); stage.classList.add('woke'); lose(); });
     },
+    async solve() { /* the winning move is not to play */ },
   },
   {
-    id: 'light', cmd: 'Light ’em!',
+    id: 'light', cmd: 'Light ’em!', theme: 'cozy',
     setup({ stage, win, lose, sfx, speed }) {
       // Light the candles in order, 1 first.
       const n = speed > 1.25 ? 5 : 4;
       let next = 1;
       spots(n, 24, 14, 16).forEach((p, i) => {
-        const c = at(h('button', { type: 'button', class: 'mc-candle' }, h('b', {}, String(i + 1))), p.x, p.y);
+        const c = at(h('button', { type: 'button', class: 'mc-candle', 'data-n': i + 1 }, h('b', {}, String(i + 1))), p.x, p.y);
         tapper(c, () => {
           if (c.classList.contains('lit')) return;
           if (i + 1 !== next) { sfx('nope'); c.classList.add('bad'); return lose(); }
@@ -249,44 +265,52 @@ export const MICROS = [
         stage.append(c);
       });
     },
-  },
-  {
-    id: 'match', cmd: 'Match!',
-    setup({ stage, win, lose, sfx, speed }) {
-      const opts = shuffle(ITEMS.slice()).slice(0, speed > 1.3 ? 6 : 4);
-      const want = pick(opts);
-      stage.append(h('div', { class: 'mc-want' }, icon(want, 'ico big')),
-        h('div', { class: 'mc-row' }, opts.map(it => tapper(h('button', { type: 'button', class: 'mc-pick' }, icon(it, 'ico')),
-          () => { sfx(it === want ? 'coin' : 'nope'); it === want ? win() : lose(); }))));
+    async solve(b) {
+      for (const c of b.qa('.mc-candle').sort((p, q) => p.dataset.n - q.dataset.n)) await b.tap(c);
     },
   },
   {
-    id: 'curtain', cmd: 'Shut it!',
+    id: 'match', cmd: 'Match!', theme: 'cozy',
+    setup({ stage, win, lose, sfx, speed, expose }) {
+      const opts = shuffle(ITEMS.slice()).slice(0, speed > 1.3 ? 6 : 4);
+      const want = pick(opts);
+      const btns = opts.map(it => tapper(h('button', { type: 'button', class: 'mc-pick' }, icon(it, 'ico')),
+        () => { sfx(it === want ? 'coin' : 'nope'); it === want ? win() : lose(); }));
+      stage.append(h('div', { class: 'mc-want' }, icon(want, 'ico big')), h('div', { class: 'mc-row' }, btns));
+      expose({ el: btns[opts.indexOf(want)] });
+    },
+    async solve(b, s) { await b.tap(s.el); },
+  },
+  {
+    id: 'curtain', cmd: 'Shut it!', theme: 'cozy',
     setup({ stage, win, sfx, speed, frame, pos }) {
       // Drag the curtain across the rainy window before the draught gets in.
       const cur = h('i', { class: 'mc-curtain' });
       stage.append(h('div', { class: 'mc-window' }), cur, h('p', { class: 'mc-note' }, 'Drag the curtain across →'));
       let w = 12, drag = false;
-      stage.addEventListener('pointerdown', e => { drag = true; stage.setPointerCapture?.(e.pointerId); sfx('select'); });
-      stage.addEventListener('pointermove', e => {
-        if (!drag) return;
-        w = Math.max(w, Math.min(100, pos(e).x));
-        if (w >= 88) { sfx('door'); win(); }
+      follow(stage, pos, (p, phase) => {
+        if (phase === 'down') { drag = true; sfx('select'); }
+        if (phase === 'up') drag = false;
+        if (phase === 'move' && drag) {
+          w = Math.max(w, Math.min(100, p.x));
+          if (w >= 88) { sfx('door'); win(); }
+        }
       });
-      stage.addEventListener('pointerup', () => (drag = false));
       frame(dt => { if (!drag) w = Math.max(12, w - 30 * speed * dt); cur.style.width = w + '%'; });
     },
+    async solve(b) { await b.drag({ x: 8, y: 50 }, { x: 96, y: 50 }, 400, 12); },
   },
 ];
 
 // ---------- word microgames (Word Rush) ----------
 const W3 = [...WORDS3];
 const letterButtons = (letters, onTap) => h('div', { class: 'mc-row' }, letters.map((ch, k) => tapper(h('button', { type: 'button', class: 'wt-tile' }, ch), e => onTap(ch, k, e.currentTarget))));
+const byText = (b, sel, text) => b.qa(sel).find(el => el.textContent === text && !el.disabled);
 
 export const WORD_MICROS = [
   {
-    id: 'spell', cmd: 'Spell it!',
-    setup({ stage, win, lose, sfx }) {
+    id: 'spell', cmd: 'Spell it!', theme: 'word',
+    setup({ stage, win, lose, sfx, expose }) {
       // Unscramble three letters into any real word.
       const w = pick(W3);
       let tiles = shuffle([...w]);
@@ -301,11 +325,13 @@ export const WORD_MICROS = [
         sfx('type');
         if (built.length === 3) WORDS3.has(built) ? win() : lose();
       }));
+      expose({ w });
     },
+    async solve(b, s) { for (const ch of s.w) await b.tap(byText(b, '.wt-tile', ch)); },
   },
   {
-    id: 'fill', cmd: 'Fill it!',
-    setup({ stage, win, lose, sfx }) {
+    id: 'fill', cmd: 'Fill it!', theme: 'word',
+    setup({ stage, win, lose, sfx, expose }) {
       // One letter is missing. Only one of the choices makes a word.
       for (let tries = 0; tries < 50; tries++) {
         const w = pick(W3), gap = rnd(3);
@@ -313,13 +339,15 @@ export const WORD_MICROS = [
         if (bad.length < 2) continue;
         stage.append(h('div', { class: 'mc-spell' }, [...w].map((ch, k) => h('b', { class: k === gap ? 'gap' : '' }, k === gap ? '?' : ch))),
           letterButtons(shuffle([w[gap], ...bad]), ch => { sfx(ch === w[gap] ? 'type' : 'nope'); ch === w[gap] ? win() : lose(); }));
+        expose({ ch: w[gap] });
         return;
       }
     },
+    async solve(b, s) { await b.tap(byText(b, '.wt-tile', s.ch)); },
   },
   {
-    id: 'real', cmd: 'Real one!',
-    setup({ stage, win, lose, sfx }) {
+    id: 'real', cmd: 'Real one!', theme: 'word',
+    setup({ stage, win, lose, sfx, expose }) {
       // Two of these are gibberish.
       const w = pick(W3);
       const fakes = new Set();
@@ -329,21 +357,25 @@ export const WORD_MICROS = [
       }
       stage.append(h('div', { class: 'mc-col' }, shuffle([w, ...fakes]).map(x => tapper(h('button', { type: 'button', class: 'btn mc-word' }, x),
         () => { sfx(x === w ? 'coin' : 'nope'); x === w ? win() : lose(); }))));
+      expose({ w });
     },
+    async solve(b, s) { await b.tap(byText(b, '.mc-word', s.w)); },
   },
   {
-    id: 'clue', cmd: 'Answer it!',
-    setup({ stage, win, lose, sfx }) {
+    id: 'clue', cmd: 'Answer it!', theme: 'word',
+    setup({ stage, win, lose, sfx, expose }) {
       const e = pick(WORDS);
       const others = shuffle(WORDS.filter(x => x.word.length === e.word.length && x.word !== e.word)).slice(0, 2).map(x => x.word);
       stage.append(h('p', { class: 'mc-clue' }, e.clue),
         h('div', { class: 'mc-col' }, shuffle([e.word, ...others]).map(x => tapper(h('button', { type: 'button', class: 'btn mc-word' }, x),
           () => { sfx(x === e.word ? 'coin' : 'nope'); x === e.word ? win() : lose(); }))));
+      expose({ w: e.word });
     },
+    async solve(b, s) { await b.tap(byText(b, '.mc-word', s.w)); },
   },
   {
-    id: 'type', cmd: 'Type it!',
-    setup({ stage, win, lose, sfx }) {
+    id: 'type', cmd: 'Type it!', theme: 'word',
+    setup({ stage, win, lose, sfx, expose }) {
       // Tap the letters of the word in order. One slip and it's over.
       const w = pick(WORDS.filter(x => x.word.length <= 5)).word;
       const decoys = shuffle([...'BCDFGHKMPRSTW'].filter(ch => !w.includes(ch))).slice(0, 3);
@@ -355,51 +387,12 @@ export const WORD_MICROS = [
         sfx('type');
         if (got === w.length) win();
       }));
+      expose({ w });
     },
+    // the same letter can repeat, and taps on one key within the dedupe window are fine here
+    async solve(b, s) { for (const ch of s.w) { await b.tap(byText(b, '.wt-tile', ch)); await b.wait(40); } },
   },
 ];
-
-// Play one microgame in `host`. Resolves true (won) or false.
-export function runMicro(host, m, { sfx, speed = 1 }) {
-  const stage = h('div', { class: 'mc-stage mcs-' + m.id });
-  const fuse = h('div', { class: 'mc-fuse' }, h('i'));
-  const box = h('div', { class: 'mc-box' }, stage, h('div', { class: 'mc-cmd' }, m.cmd));
-  const wrap = h('div', { class: 'mc' }, fuse, box);
-  host.replaceChildren(wrap);
-  return new Promise(resolve => {
-    let over = false, t = 0, last = performance.now(), tick = 3;
-    const frames = [];
-    const end = ok => {
-      if (over) return;
-      over = true;
-      wrap.classList.add(ok ? 'won' : 'lost');
-      box.append(h('div', { class: 'mc-stamp' }, ok ? 'Nice!' : 'Oops!'));
-      sfx(ok ? 'sparkle' : 'fizzle');
-      if (ok) sparkle(box, { count: 12 });
-      setTimeout(() => resolve(ok), 750);
-    };
-    const pos = e => {
-      const r = stage.getBoundingClientRect();
-      return { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 };
-    };
-    m.setup({ stage, speed, sfx, pos, win: () => end(true), lose: () => end(false), frame: fn => frames.push(fn) });
-    const loop = now => {
-      if (over) return;
-      if (!wrap.isConnected) { over = true; resolve(false); return; }
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      t += dt;
-      fuse.firstChild.style.width = `${Math.max(0, 100 - (t / TIME) * 100)}%`;
-      fuse.classList.toggle('low', t > TIME - 1.5);
-      // tick-tock for the last three seconds, like the bomb fuse
-      if (t > TIME - tick) { sfx('blip'); tick--; }
-      for (const f of frames) if (!over) f(dt, t);
-      if (t >= TIME) return end(!!m.timeoutWins);
-      requestAnimationFrame(loop);
-    };
-    requestAnimationFrame(loop);
-  });
-}
 
 // A rush: a string of microgames back to back, each a little faster. Survive them all.
 function rush(root, { difficulty: d, sfx, boost }, pool, title, tip, rounds) {

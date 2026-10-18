@@ -10,8 +10,9 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
 const PORT = Number(process.env.PORT || 8080);
 const DB_FILE = path.join(DATA_DIR, 'leaderboard.json');
 
-// Games with leaderboards and how many levels each has.
-const GAMES = { meowdoku: { levels: 100 } };
+// Games with leaderboards. Timed games rank each level by fastest time; score games keep one
+// high score per player (higher is better).
+const GAMES = { meowdoku: { levels: 100 }, micro: { score: true, max: 999 } };
 
 // ---------- storage ----------
 let db = {};
@@ -65,6 +66,18 @@ function overallBoard(game, player) {
   };
 }
 
+function scoreBoard(game, player) {
+  const rows = Object.entries(db[game].scores || {})
+    .map(([id, r]) => ({ id, name: r.name, score: r.score, at: r.at }))
+    .sort((a, b) => b.score - a.score || a.at - b.at);
+  const you = rows.findIndex(r => r.id === player);
+  return {
+    top: rows.slice(0, 20).map((r, i) => ({ rank: i + 1, name: r.name, score: r.score, you: r.id === player })),
+    you: you >= 0 ? { rank: you + 1, score: rows[you].score } : null,
+    players: rows.length,
+  };
+}
+
 // Simple per-IP rate limit for score posts.
 const hits = new Map();
 function limited(ip) {
@@ -77,9 +90,21 @@ function limited(ip) {
 }
 
 function submit(body, ip) {
-  const { game, level, player, name, time } = body || {};
+  const { game, level, player, name, time, score } = body || {};
   const spec = GAMES[game];
   if (!spec) return [400, { error: 'unknown game' }];
+  if (spec.score) {
+    if (!validPlayer(player)) return [400, { error: 'bad player' }];
+    if (!Number.isInteger(score) || score < 1 || score > spec.max) return [400, { error: 'bad score' }];
+    if (limited(ip)) return [429, { error: 'slow down' }];
+    const all = (db[game].scores ||= {});
+    const prev = all[player];
+    const clean = cleanName(name);
+    if (!prev || score > prev.score) all[player] = { name: clean, score, at: Date.now() };
+    else prev.name = clean;
+    save();
+    return [200, { best: all[player].score, ...scoreBoard(game, player) }];
+  }
   if (!Number.isInteger(level) || level < 1 || level > spec.levels) return [400, { error: 'bad level' }];
   if (!validPlayer(player)) return [400, { error: 'bad player' }];
   if (typeof time !== 'number' || !Number.isFinite(time) || time < 3 || time > 86_400) return [400, { error: 'bad time' }];
@@ -146,6 +171,7 @@ function route(req, res) {
     if (!GAMES[game]) return send(res, 400, { error: 'unknown game' });
     const player = url.searchParams.get('player') || '';
     const level = Number(url.searchParams.get('level'));
+    if (GAMES[game].score) return send(res, 200, scoreBoard(game, player));
     return send(res, 200, level ? levelBoard(game, level, player) : overallBoard(game, player));
   }
 

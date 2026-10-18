@@ -3,6 +3,8 @@ import { $, h, icon, showModal, toast } from '../ui.js';
 import { meowdokuBoard, decode } from '../meowdokuboard.js';
 import { LEVELS } from './meowdoku-levels.js';
 import { fetchBoard, submitScore, fmtSecs } from '../leaderboard.js';
+import { mountMicro } from './microarcade.js';
+import { ALL as MICROS } from '../micro/index.js';
 
 const GAME = 'meowdoku';
 const LIVES = 3;
@@ -16,7 +18,7 @@ const reward = n => 2 + Math.floor(n / 10);
 
 const SOON = [['Star Pegs', 'sp_pegs'], ['Word Square', 'sp_cw'], ['Tic-Tac-Toe', 'sp_ttt']];
 
-// The arcade cabinet: Magical Mewdoku with 100 levels and a leaderboard.
+// The arcade cabinet: pick a cartridge. Magical Mewdoku (100 levels) or DANG! Micro Mayhem.
 export function mountArcade({ sfx, changed, onExit }) {
   const root = $('#scr-arcade');
   const A = S.arcade.meowdoku;
@@ -45,7 +47,7 @@ export function mountArcade({ sfx, changed, onExit }) {
     }
     const cleared = Object.keys(A.best).length;
     frame(
-      header(`${cleared}/${LEVEL_COUNT} cleared`, () => { stopTimer(); onExit(); }),
+      header(`${cleared}/${LEVEL_COUNT} cleared`, () => { stopTimer(); menu(); }),
       h('div', { class: 'arc-tabs' },
         h('button', { class: 'seg-btn on' }, 'Levels'),
         h('button', { class: 'seg-btn', onclick: () => board(0) }, 'Leaderboard')),
@@ -196,6 +198,24 @@ export function mountArcade({ sfx, changed, onExit }) {
     ].flat().filter(Boolean));
   }
 
-  levels();
+  // ---------- cartridge select ----------
+  function menu() {
+    const M = S.arcade.micro;
+    frame(
+      h('div', { class: 'arc-head' },
+        h('button', { class: 'btn small', onclick: () => { stopTimer(); onExit(); } }, '◀ Back'),
+        h('div', { class: 'arc-title' }, h('b', {}, 'Arcade'), h('small', {}, 'Insert coin… just kidding, it’s free'))),
+      h('div', { class: 'carts' },
+        h('button', { class: 'cart cart-md', onclick: levels },
+          icon('girl' + ((Object.keys(A.best).length % 10)), 'ico huge'),
+          h('b', {}, 'Magical Mewdoku'),
+          h('small', {}, `${Object.keys(A.best).length}/${LEVEL_COUNT} levels cleared`)),
+        h('button', { class: 'cart cart-mm', onclick: () => mountMicro(root, { sfx, changed, back: menu }) },
+          icon('sp_micro', 'ico huge'),
+          h('b', {}, 'DANG! Micro Mayhem'),
+          h('small', {}, `${MICROS.length} microgames · best ${M.best}`))));
+  }
+
+  menu();
   return { stop: stopTimer };
 }
