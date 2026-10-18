@@ -242,6 +242,21 @@ const CSS = `
 .cz-glass { width: 30%; height: 42%; background: rgba(191, 230, 255, .35); box-shadow: 0 0 0 4px #1a1220; overflow: hidden; }
 .cz-glass .cz-fill { background: #f39a3a; }
 .cz-step { font-size: 22px; color: #ffe27a; white-space: nowrap; text-shadow: 2px 2px 0 #1a1220; z-index: 4; }
+.cz-pips { display: flex; gap: 5px; z-index: 4; }
+.cz-pips b { width: 14px; height: 14px; background: #2a1c24; box-shadow: 0 0 0 2px #1a1220; }
+.cz-pips b.now { background: #f08ab0; }
+.cz-pips b.on { background: #ffe27a; }
+.cz-fried { --b: #f2e6c9; width: 22%; height: 11%; border-radius: 46% 54% 50% 50%; background: radial-gradient(circle at 50% 50%, #ffe27a 0 26%, var(--b) 28%); box-shadow: 0 0 0 3px #1a1220; z-index: 2; }
+.cz-fried.ready { box-shadow: 0 0 0 3px #1a1220, 0 0 14px 4px #ffe27a; }
+.cz-fried.burnt { background: radial-gradient(circle at 50% 50%, #3a2a1a 0 26%, #1a1210 28%); }
+.cz-fried.flip { animation: czflip .45s ease-out; }
+.cz-fried.hop { animation: czhop .3s; }
+.cz-fried.done { --b: #e8a848; width: 16%; height: 8%; }
+@keyframes czhop { 50% { transform: translate(-50%, -80%); } }
+.cz-toast.small { width: 16%; height: 14%; box-shadow: 0 0 0 3px #a0663a, 0 0 0 5px #1a1220; }
+.cz-plate { width: 28%; height: 7%; border-radius: 50%; background: #fff4e0; box-shadow: 0 0 0 4px #1a1220, inset 0 -4px 0 #c9ad7f; z-index: 3; }
+.cz-plate.has1::before, .cz-plate.has2::before { content: ''; position: absolute; left: 18%; top: -60%; width: 36%; height: 90%; border-radius: 50%; background: radial-gradient(circle, #ffe27a 0 28%, #fff4e0 30%); box-shadow: 0 0 0 2px #1a1220; }
+.cz-plate.has2::after { content: ''; position: absolute; left: 54%; top: -120%; width: 30%; height: 150%; background: #ffe27a; box-shadow: 0 0 0 3px #a0663a, 0 0 0 5px #1a1220; }
 `;
 const css = () => addStyle('cozy', CSS);
 
@@ -992,97 +1007,211 @@ export default [
     async solve(b, s) { await b.until(() => s.ready); await b.tap(s.el); },
   },
   {
-    id: 'cz-breakfast', cmd: 'Cook breakfast!', theme: 'cozy', time: 14, boss: true,
-    setup({ stage, win, lose, sfx, speed, frame, pos, expose }) {
-      // Three steps against the clock: crack the egg into the pan, butter the toast, pour the juice.
+    id: 'cz-breakfast', cmd: 'Cook breakfast!', theme: 'cozy', time: 24, boss: true,
+    setup({ stage, win, lose, sfx, speed, frame, pos, expose, phase }) {
+      // Five phases against one long fuse: crack the egg, flip it golden, butter the toast,
+      // pour the juice, then catch it all on the plate. Fumbles mean "try again"; only a
+      // burnt egg ends breakfast early.
       css();
       stage.classList.add('cz-kitchen');
+      const TITLES = ['Crack the egg!', 'Flip it golden!', 'Butter the toast!', 'Pour the juice!', 'Plate it up!'];
       const label = place(stage, div('cz-step'), 50, 8);
-      const lo = 55 + rnd(15), hi = lo + Math.max(9, 16 - speed * 3);
-      const s = expose({ step: 0, busy: true, x: 50, dropped: false, rub: 0, level: 0, lo, hi });
-      const need = 220 + 40 * speed;
-      let t = 0, busyUntil = 0.4, layer = h('div'), egg, ey = 20, last = null, pouring = false, fill, butter, done = false;
-      const scene = (text, ...kids) => {
+      const pips = place(stage, div('cz-pips'), 50, 16);
+      const pipEls = TITLES.map(() => h('b'));
+      pips.append(...pipEls);
+      const s = expose({
+        step: -1, busy: true, x: 50, dropped: false, ey: 20,
+        brown: 0, golden: [0.55, 0.8],
+        rub: 0, need: 200 + 40 * speed,
+        level: 0, lo: 0, hi: 0,
+        px: 50, items: [], caught: 0,
+      });
+      let t = 0, busyUntil = 0, layer = h('div'), done = false;
+      let egg, panEgg, butter, fill, plate, last = null, pouring = false, swipeFrom = null, msgUntil = 0;
+      const say = text => { label.textContent = text; msgUntil = t + 0.9; };
+      const scene = (n, ...kids) => {
         layer.remove();
         layer = h('div', { style: 'position:absolute;inset:0' }, ...kids);
         stage.append(layer);
-        label.textContent = text;
+        s.step = n;
+        label.textContent = `${n + 1}/5 ${TITLES[n]}`;
+        pipEls.forEach((p, i) => p.classList.toggle('on', i < n));
+        pipEls[n].classList.add('now');
         s.busy = true;
-        busyUntil = t + 0.45;
+        busyUntil = t + 0.9;
+        phase(n + 1, TITLES[n]);
       };
-      const step0 = () => {
-        egg = at(h('img', { src: art(EGG), class: 'mc-spr', alt: '', style: 'width:10%' }), 50, 20);
-        scene('1/3 Crack the egg in!', at(div('cz-pan'), 50, 74), egg);
+      const finish = () => { done = true; pipEls.forEach(p => p.classList.add('on')); label.textContent = 'Breakfast is served!'; sfx('coin'); win(); };
+
+      // 1. crack: an egg swings over the pan; tap to drop it
+      const newEgg = () => {
+        egg?.remove();
+        egg = at(h('img', { src: art(EGG), class: 'mc-spr', alt: '', style: 'width:10%' }), 50, 26);
+        layer.append(egg);
+        s.dropped = false; s.ey = 26;
       };
+      const step0 = () => { scene(0, at(div('cz-pan'), 50, 74)); newEgg(); };
+      // 2. flip: the fried egg browns; swipe up while it's golden
       const step1 = () => {
-        butter = h('i');
-        scene('2/3 Butter the toast!', at(div('cz-toast', '', butter), 50, 56));
-        s.step = 1;
+        panEgg = at(div('cz-fried'), 50, 72);
+        scene(1, at(div('cz-pan'), 50, 74), panEgg);
+        s.brown = 0;
       };
-      const step2 = () => {
+      // 3. butter: scrub across the toast
+      const step2 = () => { butter = h('i'); s.rub = 0; scene(2, at(div('cz-toast', '', butter), 50, 58)); };
+      // 4. juice: hold to pour, let go inside the band; overflow means a fresh glass
+      const newGlass = () => {
+        s.lo = 52 + rnd(18); s.hi = s.lo + Math.max(10, 17 - speed * 3); s.level = 0;
         fill = div('cz-fill');
-        scene('3/3 Pour the juice!', at(div('cz-glass', '', fill, div('cz-band', `bottom:${lo}%;height:${hi - lo}%`)), 50, 60));
-        s.step = 2;
+        return at(div('cz-glass', '', fill, div('cz-band', `bottom:${s.lo}%;height:${s.hi - s.lo}%`)), 50, 60);
       };
+      const step3 = () => scene(3, newGlass());
+      // 5. plate: slide the plate under the egg and the toast as they drop
+      const step4 = () => {
+        plate = at(div('cz-plate'), 50, 88);
+        s.px = 50; s.items = []; s.caught = 0;
+        scene(4, plate);
+      };
+      const dropItem = kind => {
+        const el = kind === 'egg' ? div('cz-fried done') : div('cz-toast small', '', h('i', { style: 'opacity:1' }));
+        const it = { kind, x: 15 + Math.random() * 70, y: -8, el, done: false };
+        layer.append(at(el, it.x, it.y));
+        s.items.push(it);
+      };
+
       step0();
-      follow(stage, pos, (p, phase) => {
-        if (done || s.busy) return;
-        if (s.step === 0 && phase === 'down' && !s.dropped) { s.dropped = true; sfx('swap'); }
+      follow(stage, pos, (p, ph) => {
+        if (done) return;
+        if (s.step === 4) { s.px = clamp(p.x, 12, 88); at(plate, s.px, 88); return; }
+        if (s.busy) return;
+        if (s.step === 0 && ph === 'down' && !s.dropped) { s.dropped = true; sfx('swap'); }
         if (s.step === 1) {
-          if (phase === 'down') last = p;
-          else if (phase === 'up') last = null;
+          if (ph === 'down') swipeFrom = p;
+          if (ph === 'up' && swipeFrom) {
+            const up = swipeFrom.y - p.y > 10;
+            swipeFrom = null;
+            if (!up) return;
+            if (s.brown >= s.golden[0] && s.brown <= s.golden[1]) {
+              panEgg.classList.add('flip'); sfx('pop');
+              s.busy = true;
+              setTimeout(() => !done && step2(), 450);
+            } else { sfx('nope'); say('Too soon! Wait for golden'); panEgg.classList.add('hop'); setTimeout(() => panEgg?.classList.remove('hop'), 300); }
+          }
+        }
+        if (s.step === 2) {
+          if (ph === 'down') last = p;
+          else if (ph === 'up') last = null;
           else if (last) {
-            if (Math.abs(p.x - 50) < 24 && Math.abs(p.y - 56) < 22) {
+            if (Math.abs(p.x - 50) < 24 && Math.abs(p.y - 58) < 22) {
               s.rub += dist(p, last);
-              butter.style.opacity = Math.min(1, s.rub / need);
-              if (s.rub >= need) { sfx('coin'); step2(); }
+              butter.style.opacity = Math.min(1, s.rub / s.need);
+              if (s.rub >= s.need) { sfx('coin'); last = null; step3(); }
             }
             last = p;
           }
         }
-        if (s.step === 2) {
-          if (phase === 'down') pouring = true;
-          if (phase === 'up') {
+        if (s.step === 3) {
+          if (ph === 'down') pouring = true;
+          if (ph === 'up' && pouring) {
             pouring = false;
-            if (s.level >= lo && s.level <= hi) { done = true; label.textContent = 'Breakfast is served!'; win(); }
+            if (s.level >= s.lo && s.level <= s.hi) { sfx('coin'); step4(); }
+            else if (s.level > s.hi) { sfx('fizzle'); say('Too much! Fresh glass'); s.level = 0; layer.replaceChildren(newGlass()); }
+            else if (s.level > 0) { sfx('nope'); say('Not to the line! Top it up'); }
           }
         }
       });
+
+      let nextDrop = 0, dropped = 0;
       frame(dt => {
         t += dt;
         if (done) return;
-        if (s.busy && t >= busyUntil) s.busy = false;
+        if (s.busy && t >= busyUntil && s.step !== 1) s.busy = false;
+        if (s.step === 1 && s.busy && t >= busyUntil && !panEgg.classList.contains('flip')) s.busy = false;
+        if (msgUntil && t > msgUntil) { msgUntil = 0; label.textContent = `${s.step + 1}/5 ${TITLES[s.step]}`; }
         if (s.step === 0) {
-          if (!s.dropped) s.x = 50 + Math.sin(t * (1.6 + 0.5 * speed)) * 36;
+          if (!s.dropped) s.x = 50 + Math.sin(t * (1.5 + 0.45 * speed)) * 34;
           else {
-            ey += 170 * dt;
-            if (ey >= 70) {
-              if (Math.abs(s.x - 50) < 10) { sfx('pop'); step1(); }
-              else { done = true; egg.remove(); layer.append(at(div('cz-splat'), s.x, 90)); sfx('fizzle'); lose(); }
+            s.ey += 170 * dt;
+            if (s.ey >= 70) {
+              if (Math.abs(s.x - 50) < 11) { sfx('pop'); step1(); }
+              else {
+                sfx('fizzle'); say('Missed! Here’s another');
+                layer.append(at(div('cz-splat'), s.x, 90));
+                newEgg();
+              }
               return;
             }
           }
-          at(egg, s.x, ey);
-        } else if (s.step === 2) {
+          at(egg, s.x, s.ey);
+        } else if (s.step === 1) {
+          if (s.busy && t < busyUntil) return;
+          if (panEgg.classList.contains('flip')) return;
+          s.brown += (0.2 + 0.08 * speed) * dt;
+          panEgg.style.setProperty('--b', browned(s.brown));
+          if (s.brown >= s.golden[0] && s.brown <= s.golden[1]) panEgg.classList.add('ready'); else panEgg.classList.remove('ready');
+          if (s.brown > 1) { done = true; panEgg.classList.add('burnt'); label.textContent = 'Burnt to a crisp!'; sfx('fizzle'); lose(); }
+        } else if (s.step === 3) {
           if (pouring) {
             s.level += (24 + 10 * speed) * dt;
-            if (s.level > hi) { done = true; fill.classList.add('spill'); sfx('fizzle'); lose(); }
+            if (s.level > s.hi + 4) {
+              pouring = false; sfx('fizzle'); say('Spilled! Fresh glass');
+              fill.classList.add('spill');
+              setTimeout(() => { if (!done && s.step === 3) { layer.replaceChildren(newGlass()); } }, 350);
+              s.level = 0;
+            }
           }
-          fill.style.height = Math.min(100, s.level) + '%';
+          if (fill) fill.style.height = Math.min(100, s.level) + '%';
+        } else if (s.step === 4) {
+          if (s.busy) return;
+          if (dropped < 2 && t >= nextDrop && !s.items.some(i => !i.done)) { dropItem(dropped === 0 ? 'egg' : 'toast'); dropped++; nextDrop = t + 0.3; }
+          for (const it of s.items) {
+            if (it.done) continue;
+            it.y += (36 + 14 * speed) * dt;
+            at(it.el, it.x, it.y);
+            if (it.y >= 82 && it.y < 90 && Math.abs(it.x - s.px) < 13) {
+              it.done = true; it.el.remove(); s.caught++; sfx('place');
+              plate.classList.add('has' + s.caught);
+              if (s.caught >= 2) return finish();
+            } else if (it.y > 102) {
+              // missed: drop it again from somewhere else
+              it.done = true; it.el.remove(); dropped--; sfx('nope'); say('Oops! Catch it this time');
+            }
+          }
         }
       });
     },
     async solve(b, s) {
-      await b.until(() => !s.busy && Math.abs(s.x - 50) < 2);
-      await b.tap({ x: 50, y: 50 });
-      await b.until(() => s.step === 1 && !s.busy);
-      b.down({ x: 40, y: 56 });
-      for (let k = 0; s.step === 1 && !b.over(); k++) { b.move({ x: k % 2 ? 62 : 38, y: 56 }); await b.wait(25); }
-      b.up({ x: 50, y: 56 });
+      // 1. drop the egg when it swings over the pan
+      while (s.step === 0 && !b.over()) {
+        await b.until(() => (!s.busy && !s.dropped && Math.abs(s.x - 50) < 2) || s.step !== 0);
+        if (s.step !== 0) break;
+        await b.tap({ x: 50, y: 50 });
+        await b.until(() => s.step !== 0 || !s.dropped);
+      }
+      // 2. flip while golden
+      await b.until(() => s.step === 1 && !s.busy && s.brown >= s.golden[0] + 0.05);
+      await b.drag({ x: 50, y: 70 }, { x: 50, y: 40 }, 80, 3);
+      // 3. scrub the toast
       await b.until(() => s.step === 2 && !s.busy);
-      b.down({ x: 50, y: 50 });
-      await b.until(() => s.level >= (s.lo + s.hi) / 2);
-      b.up({ x: 50, y: 50 });
+      b.down({ x: 40, y: 58 });
+      for (let k = 0; s.step === 2 && !b.over(); k++) { b.move({ x: k % 2 ? 62 : 38, y: 58 }); await b.wait(25); }
+      b.up({ x: 50, y: 58 });
+      // 4. pour to the middle of the band
+      while (s.step === 3 && !b.over()) {
+        await b.until(() => !s.busy && s.level === 0);
+        b.down({ x: 50, y: 50 });
+        await b.until(() => s.level >= (s.lo + s.hi) / 2);
+        b.up({ x: 50, y: 50 });
+        await b.until(() => s.step !== 3 || s.level === 0, 1500);
+      }
+      // 5. follow the lowest falling item with the plate
+      b.down({ x: 50, y: 88 });
+      while (!b.over()) {
+        const it = s.items.filter(i => !i.done).sort((p, q) => q.y - p.y)[0];
+        if (it) b.move({ x: it.x, y: 88 });
+        await b.wait(30);
+      }
+      b.up({ x: s.px, y: 88 });
     },
   },
 ];

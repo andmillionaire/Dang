@@ -104,6 +104,15 @@ const MONSTER = [
   '.kPkkPPkkPk.',
   '..k..kk..k..',
 ];
+const MINION = [
+  '...kkkk.....',
+  '.kkssssk.kk.',
+  'kssssssskssk',
+  'kswksswksssk',
+  'ksssssssssk.',
+  '.kkUkkUkkk..',
+  '..U..U..U...',
+];
 const ARROW = [
   '....k....',
   '...kyk...',
@@ -486,34 +495,76 @@ export default [
     },
   },
   {
-    id: 'wd-boss', cmd: 'Defeat it!', theme: 'magic', time: 14, boss: true,
+    id: 'wd-boss', cmd: 'Defeat it!', theme: 'magic', time: 26, boss: true,
     setup(api) {
-      // Boss: catch stars to charge up, dodge the gloom, then tap the monster to blast it. Twice!
-      const { win, sfx, speed, frame } = api;
+      // Boss, three phases. 1: catch 3 stars to charge, tap the monster to blast it.
+      // 2: it splits off storm minions; tap them all, charge again and blast.
+      // 3: it shields up; hold to charge the Saturn glaive (you can still dodge), let go in the gold,
+      // then tap it for the finishing blast. Three hearts for the whole fight.
+      const { win, lose, sfx, speed, frame } = api;
       const { ctx, L, P } = cvs(api);
-      const mon = pic(MONSTER), girl = ico('girl' + rnd(10)), star = ico('star'), heart = ico('heart'), heartOff = ico('heartOff');
-      const s = api.expose({ gx: 50, stars: [], orbs: [], charge: 0, hp: 2, mx: 50, my: 20, P });
-      let nextOrb = 1, nextStar = 0.4, hurt = 0, blast = 0, done = false;
-      const finisher = () => {
-        s.charge = 0; s.hp--; blast = 0.5;
-        sfx('glaive');
-        if (s.hp <= 0) { done = true; sfx('boom'); win(); }
-      };
-      follow(api.stage, L, (p, ph) => {
-        if (done || ph === 'hover' || ph === 'up') return;
-        if (ph === 'down' && s.charge >= 3 && p.y < 45) return finisher();
-        s.gx = clamp(p.x, 6, 94);
+      const mon = pic(MONSTER), minionPic = pic(MINION), girl = ico('girl' + rnd(10)), star = ico('star'), heart = ico('heart'), heartOff = ico('heartOff');
+      const lo = 0.66, hi = 0.88 - 0.03 * (speed - 1);
+      const s = api.expose({
+        ph: 1, trans: 0, gx: 50, stars: [], orbs: [], minions: [], charge: 0, hp: 3, lives: 3, inv: 0,
+        mx: 50, my: 20, shield: false, charging: false, g: 0, lo, hi, P,
       });
-      frame((dt, t) => {
-        s.mx = 50 + Math.sin(t * 0.9 * speed) * 30; s.my = 20 + Math.sin(t * 2) * 3;
-        hurt -= dt; blast -= dt;
-        if (t >= nextOrb) {
-          nextOrb = t + 1.0 / speed;
-          const vy = 50 * Math.sqrt(speed), tt = (86 - s.my) / vy;
+      let t = 0, nextOrb = 1.2, nextStar = 0.4, blast = 0, broke = 0, done = false, dragging = false;
+      const canBlast = () => !s.trans && (s.ph === 3 ? !s.shield : s.charge >= 3 && !s.minions.length);
+      const setPhase = n => {
+        s.ph = n; s.trans = 1.4; nextOrb = t + 1.8;
+        api.phase(n, ['', 'Charge up!', 'Minions!', 'Final form!'][n]);
+        if (n === 2) {
+          const k = 3 + (speed > 1.5 ? 1 : 0);
+          for (let i = 0; i < k; i++) s.minions.push({ x: s.mx + (i - (k - 1) / 2) * 9, y: s.my + 4, ph: i * 1.7, delay: 0.9 + i * 0.35 });
+        }
+        if (n === 3) { s.shield = true; s.stars.forEach(st => (st.done = true)); }
+      };
+      const blastIt = () => {
+        s.charge = 0; s.hp--; blast = 0.5;
+        sfx(s.hp <= 0 ? 'boom' : 'glaive');
+        if (s.hp <= 0) { done = true; win(); }
+        else setPhase(4 - s.hp);
+      };
+      const hitGirl = () => {
+        if (s.inv > 0) return;
+        s.lives--; s.inv = 1; sfx('nope');
+        if (s.lives <= 0) { done = true; lose(); }
+      };
+      follow(api.stage, L, (p, phase) => {
+        if (done || phase === 'hover') return;
+        if (phase === 'down') {
+          if (s.ph === 3 && s.shield && !s.trans) { s.charging = true; s.g = 0; dragging = true; s.gx = clamp(p.x, 8, 92); return; }
+          const mi = s.minions.findIndex(m => m.delay <= 0 && Math.hypot(m.x - p.x, m.y - p.y) < 10);
+          if (mi >= 0) { s.minions.splice(mi, 1); sfx('sparkle'); return; }
+          if (canBlast() && Math.hypot(s.mx - p.x, s.my - p.y) < 17) return blastIt();
+          dragging = true; s.gx = clamp(p.x, 8, 92);
+          return;
+        }
+        if (phase === 'move' && dragging) s.gx = clamp(p.x, 8, 92);
+        if (phase === 'up') {
+          dragging = false;
+          if (s.charging) {
+            s.charging = false;
+            if (s.g >= lo && s.g <= hi) { s.shield = false; broke = 0.6; sfx('glaive'); } else sfx('fizzle');
+            s.g = 0;
+          }
+        }
+      });
+      frame(dt => {
+        t += dt;
+        const big = s.ph === 3;
+        s.mx = 50 + Math.sin(t * (big ? 0.7 : 0.9) * speed) * 30; s.my = 20 + Math.sin(t * 2) * 3;
+        s.inv = Math.max(0, s.inv - dt); s.trans = Math.max(0, s.trans - dt); blast -= dt; broke -= dt;
+        if (s.charging) { s.g += 0.62 * speed * dt; if (s.g > 1) { s.charging = false; s.g = 0; sfx('fizzle'); } }
+        // gloom orbs, aimed at the girl
+        if (!s.trans && t >= nextOrb) {
+          nextOrb = t + (big ? 1.5 : s.ph === 2 ? 1.3 : 1.0) / speed;
+          const vy = (big ? 42 : 50) * Math.sqrt(speed), tt = (86 - s.my) / vy;
           s.orbs.push({ x: s.mx, y: s.my + 6, vx: (s.gx - s.mx) / tt, vy });
           sfx('swap');
         }
-        if (t >= nextStar) { nextStar = t + 0.75 / speed; s.stars.push({ x0: 8 + Math.random() * 84, x: 0, y: -4, ph: Math.random() * 6 }); }
+        if (s.ph < 3 && t >= nextStar) { nextStar = t + 0.75 / speed; s.stars.push({ x0: 8 + Math.random() * 84, x: 0, y: -4, ph: Math.random() * 6 }); }
         for (const st of s.stars) {
           if (st.done) continue;
           st.y += 35 * Math.sqrt(speed) * dt; st.x = clamp(st.x0 + Math.sin(st.y / 8 + st.ph) * 5, 5, 95);
@@ -523,48 +574,94 @@ export default [
         for (const o of s.orbs) {
           if (o.done) continue;
           o.x += o.vx * dt; o.y += o.vy * dt;
-          if (o.y > 80 && o.y < 92 && Math.abs(o.x - s.gx) < 6) { o.done = true; s.charge = Math.max(0, s.charge - 1); hurt = 0.4; sfx('nope'); }
+          if (o.y > 80 && o.y < 92 && Math.abs(o.x - s.gx) < 6) { o.done = true; hitGirl(); }
           if (o.y > 104) o.done = true;
         }
-        bands(ctx, ['#100a20', '#1a1030', '#2a1640', '#3a1c50']);
+        for (const m of s.minions) {
+          if (m.delay > 0) { m.delay -= dt; m.y = s.my + 4 + (0.9 - m.delay) * 6; continue; }
+          const tx = s.gx, ty = 86, d = Math.hypot(tx - m.x, ty - m.y) || 1, v = (8 + 6 * speed) * dt;
+          m.x += ((tx - m.x) / d) * v + Math.sin(t * 3 + m.ph) * 8 * dt; m.y += ((ty - m.y) / d) * v;
+          if (d < 7) { m.gone = true; hitGirl(); }
+        }
+        s.minions = s.minions.filter(m => !m.gone);
+        if (done) return;
+        // ---- draw ----
+        bands(ctx, big ? ['#1a0618', '#2a0a28', '#3a1036', '#4a1444'] : ['#100a20', '#1a1030', '#2a1640', '#3a1c50']);
         stars(ctx, t, 30);
         rect(ctx, 0, 94, 100, 6, '#2a1c3a');
         if (blast > 0) line(ctx, { x: s.gx, y: 84 }, { x: s.mx, y: s.my }, '#fff4e0', 4 * blast + 1);
         ctx.globalAlpha = blast > 0 && Math.floor(t * 20) % 2 ? 0.4 : 1;
-        if (!done) blit(ctx, mon, s.mx, s.my, 26, 24);
+        blit(ctx, mon, s.mx, s.my, big ? 32 : 26, big ? 30 : 24);
         ctx.globalAlpha = 1;
-        if (s.charge >= 3 && !done) { ctx.strokeStyle = Math.floor(t * 8) % 2 ? '#ffe27a' : '#f08ab0'; ctx.lineWidth = 1; ctx.strokeRect(s.mx - 16, s.my - 15, 32, 30); txt(ctx, 'TAP IT!', s.mx, s.my + 20, 9, '#ffe27a'); }
+        if (s.shield) {
+          ctx.strokeStyle = Math.floor(t * 6) % 2 ? '#9fd3f2' : '#bfe6ff'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(s.mx, s.my, 20 + Math.sin(t * 5), 0, Math.PI * 2); ctx.stroke();
+        }
+        if (broke > 0) { ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(s.mx, s.my, 20 + (0.6 - broke) * 40, 0, Math.PI * 2); ctx.stroke(); }
+        if (canBlast()) { ctx.strokeStyle = Math.floor(t * 8) % 2 ? '#ffe27a' : '#f08ab0'; ctx.lineWidth = 1; ctx.strokeRect(s.mx - 17, s.my - 16, 34, 32); txt(ctx, 'TAP IT!', s.mx, s.my + 22, 9, '#ffe27a'); }
         for (const st of s.stars) if (!st.done) blit(ctx, star, st.x, st.y, 8);
+        for (const m of s.minions) blit(ctx, minionPic, m.x, m.y + Math.sin(t * 6 + m.ph), 12, 9);
         for (const o of s.orbs) if (!o.done) { disc(ctx, o.x, o.y, 3, '#2a1030'); disc(ctx, o.x, o.y, 2, '#c0507a'); }
-        ctx.globalAlpha = hurt > 0 && Math.floor(t * 20) % 2 ? 0.3 : 1;
+        ctx.globalAlpha = s.inv > 0 && Math.floor(t * 20) % 2 ? 0.3 : 1;
         blit(ctx, girl, s.gx, 87, 14);
         ctx.globalAlpha = 1;
-        for (let k = 0; k < 2; k++) blit(ctx, k < s.hp ? heart : heartOff, 6 + k * 8, 6, 7);
-        for (let k = 0; k < 3; k++) blit(ctx, star, 74 + k * 9, 6, 7);
-        for (let k = s.charge; k < 3; k++) rect(ctx, 71 + k * 9, 3, 7, 7, 'rgba(16,10,32,0.7)');
+        if (s.charging) { ctx.strokeStyle = '#f08ab0'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(s.gx, 87, 9 + s.g * 4, 0, Math.PI * 2); ctx.stroke(); }
+        // HUD: hearts, boss HP, star charge or glaive meter
+        for (let k = 0; k < 3; k++) blit(ctx, k < s.lives ? heart : heartOff, 5 + k * 7, 5, 6);
+        rect(ctx, 32, 3, 36, 5, '#1a1220');
+        for (let k = 0; k < 3; k++) rect(ctx, 33 + k * 12, 4, 10, 3, k < s.hp ? '#c0507a' : '#3a2a4a');
+        if (s.ph < 3) {
+          for (let k = 0; k < 3; k++) blit(ctx, star, 76 + k * 8, 5, 6);
+          for (let k = s.charge; k < 3; k++) rect(ctx, 73 + k * 8, 2, 6, 6, 'rgba(16,10,32,0.7)');
+        } else if (s.shield) {
+          rect(ctx, 30, 95.5, 40, 3, '#1a1220');
+          rect(ctx, 30 + lo * 40, 95.5, (hi - lo) * 40, 3, '#ffe27a');
+          rect(ctx, 30, 95.5, s.g * 40, 1.5, '#f08ab0');
+          rect(ctx, 30 + s.g * 40 - 0.5, 94.5, 1, 5, '#fff4e0');
+        }
+        const hint = s.trans ? '' : s.ph === 2 && s.minions.length ? 'Tap the minions!' : canBlast() ? '' : s.ph === 3 ? 'Hold… let go in the gold!' : 'Catch 3 stars!';
+        if (hint) txt(ctx, hint, 50, 70, 7, '#d8c8f0');
       });
+      setPhase(1);
+      s.trans = 0.6;
     },
     async solve(b, s) {
-      b.down(s.P(s.gx, 88));
-      while (!b.over()) {
-        if (s.charge >= 3) {
-          b.up(s.P(s.gx, 88));
-          await b.tap(s.P(s.mx, s.my));
-          b.down(s.P(s.gx, 88));
-          continue;
-        }
-        const st = s.stars.filter(q => !q.done && q.y > 10 && q.y < 92).sort((p, q) => q.y - p.y)[0];
-        const tx = st ? st.x : 50;
+      let held = false;
+      const hold = () => { if (!held) { b.down(s.P(s.gx, 88)); held = true; } };
+      const release = () => { if (held) { b.up(s.P(s.gx, 88)); held = false; } };
+      // where to stand: near the target x, away from incoming orbs and minions
+      const spot = tx => {
         let best = s.gx, bestSc = -1e9;
-        for (let x = 6; x <= 94; x += 2) {
-          const danger = s.orbs.some(o => !o.done && o.y > 40 && o.y < 94 && Math.abs(o.x + o.vx * ((86 - o.y) / o.vy) - x) < 11);
-          const sc = -Math.abs(x - tx) - (danger ? 1000 : 0);
+        for (let x = 8; x <= 92; x += 2) {
+          const orb = s.orbs.some(o => !o.done && o.y > 36 && o.y < 94 && Math.abs(o.x + o.vx * ((86 - o.y) / o.vy) - x) < 11);
+          const near = s.minions.some(m => m.y > 60 && Math.abs(m.x - x) < 12);
+          const sc = -Math.abs(x - tx) - (orb ? 1000 : 0) - (near ? 300 : 0);
           if (sc > bestSc) { bestSc = sc; best = x; }
         }
-        b.move(s.P(best, 88));
+        return best;
+      };
+      while (!b.over()) {
+        if (s.trans) { hold(); b.move(s.P(spot(s.gx), 88)); await b.wait(20); continue; }
+        if (s.ph < 3 && s.minions.length) {
+          const m = s.minions.filter(q => q.delay <= 0).sort((p, q) => q.y - p.y)[0];
+          if (m) { release(); await b.tap(s.P(m.x, m.y)); continue; }
+        }
+        if (s.ph === 3 && s.shield) {
+          if (!s.charging) { release(); hold(); await b.wait(20); continue; }
+          if (s.g >= s.lo + 0.03 && s.g <= s.hi - 0.04) { release(); await b.wait(30); continue; }
+          b.move(s.P(spot(s.gx), 88));
+          await b.wait(15);
+          continue;
+        }
+        if (s.charge >= 3 || (s.ph === 3 && !s.shield)) {
+          if (!s.minions.length) { release(); await b.tap(s.P(s.mx, s.my)); await b.wait(20); continue; }
+        }
+        const st = s.stars.filter(q => !q.done && q.y > 10 && q.y < 92).sort((p, q) => q.y - p.y)[0];
+        hold();
+        b.move(s.P(spot(st ? st.x : 50), 88));
         await b.wait(20);
       }
-      b.up(s.P(s.gx, 88));
+      release();
     },
   },
 

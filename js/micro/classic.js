@@ -1009,74 +1009,171 @@ export default [
     },
   },
 
-  // 20. Boss fight: shoot the weak spot three times.
+  // 20. Boss fight in three phases: shoot the core, survive its angry spread, then dodge its dives
+  // and hit the heart on its back.
   {
-    id: 'cl-boss', cmd: 'Beat the boss!', theme: 'classic', time: 12, boss: true,
-    setup({ stage, win, lose, sfx, speed, frame, pos, expose }) {
+    id: 'cl-boss', cmd: 'Beat the boss!', theme: 'classic', time: 24, boss: true,
+    setup({ stage, win, lose, sfx, speed, frame, pos, expose, phase }) {
       const ctx = scene(stage);
+      const MAXHP = [0, 3, 3, 2];
+      const TITLES = [, 'Shoot the core!', 'It’s angry!', 'Final form!'];
       const s = expose({
-        bx: 50, bvx: 20 * speed, open: false, ct: 0, hp: 3, me: 3, hx: 50, shots: [], fire: [], inv: 0, ft: 0,
+        ph: 1, hp: 3, me: 3, inv: 0, pause: 0.9, ft: 0,
+        bx: 50, by: 21, bvx: 20 * speed, open: false, ct: 0,
         openFor: 1.2, closedFor: 1.3 / Math.sqrt(speed),
+        hx: 50, shots: [], fire: [], fireT: 0,
+        mode: 'hover', mt: 0, tx: 50, dived: false, // phase 3 dive cycle: hover -> warn -> dive -> rise
       });
-      follow(stage, pos, (p, phase) => {
+      phase(1, TITLES[1]);
+      follow(stage, pos, (p, ev) => {
         s.hx = clamp(p.x, 6, 94);
-        if (phase === 'down' && s.shots.length < 2) { s.shots.push({ x: s.hx, y: 82 }); sfx('swap'); }
+        if (ev === 'down' && s.shots.length < 2) { s.shots.push({ x: s.hx, y: 82 }); sfx('swap'); }
       });
-      let hurt = 0;
+      let hurt = 0, boom = 0;
+      const hitMe = () => {
+        if (s.inv > 0) return;
+        s.me--; s.inv = 1; sfx('nope');
+        if (s.me <= 0) lose();
+      };
+      const nextPhase = () => {
+        s.ph++; s.hp = MAXHP[s.ph]; s.pause = 1.3; s.fire = []; s.shots = []; s.open = false; s.ct = 0; boom = 0.6;
+        if (s.ph === 2) { s.bvx = Math.sign(s.bvx || 1) * 32 * speed; s.openFor = 0.95; s.closedFor = 1.15 / Math.sqrt(speed); }
+        if (s.ph === 3) { s.bvx = Math.sign(s.bvx || 1) * 14 * speed; s.mode = 'hover'; s.mt = 1.1; s.by = 21; s.dived = false; }
+        phase(s.ph, TITLES[s.ph]);
+      };
       frame(dt => {
-        s.ft += dt; s.inv = Math.max(0, s.inv - dt); hurt = Math.max(0, hurt - dt);
-        s.bx += s.bvx * dt;
-        if (s.bx < 20) { s.bx = 20; s.bvx = Math.abs(s.bvx); } else if (s.bx > 80) { s.bx = 80; s.bvx = -Math.abs(s.bvx); }
-        s.ct += dt;
-        if (s.open ? s.ct > s.openFor : s.ct > s.closedFor) { s.open = !s.open; s.ct = 0; }
-        if (s.ft > 0.6 && Math.floor((s.ft - dt) / (0.95 / speed)) !== Math.floor(s.ft / (0.95 / speed))) s.fire.push({ x: s.bx, y: 32 });
-        for (const f of s.fire) f.y += 42 * speed * dt;
-        s.fire = s.fire.filter(f => f.y < 104);
-        for (const f of s.fire) if (!f.spent && s.inv <= 0 && Math.abs(f.x - s.hx) < 6 && f.y > 80 && f.y < 94) {
-          f.spent = true; s.me--; s.inv = 0.8; sfx('nope');
-          if (s.me <= 0) return lose();
+        s.ft += dt; s.inv = Math.max(0, s.inv - dt); hurt = Math.max(0, hurt - dt); boom = Math.max(0, boom - dt);
+        const paused = s.pause > 0;
+        s.pause = Math.max(0, s.pause - dt);
+        // ---- boss movement and attacks ----
+        if (!paused) {
+          if (s.ph < 3 || s.mode === 'hover') {
+            s.bx += s.bvx * dt;
+            if (s.bx < 20) { s.bx = 20; s.bvx = Math.abs(s.bvx); } else if (s.bx > 80) { s.bx = 80; s.bvx = -Math.abs(s.bvx); }
+          }
+          if (s.ph < 3) {
+            s.ct += dt;
+            if (s.open ? s.ct > s.openFor : s.ct > s.closedFor) { s.open = !s.open; s.ct = 0; }
+            s.fireT += dt;
+            const every = s.ph === 1 ? 0.95 / speed : 1.3 / Math.pow(speed, 0.8);
+            if (s.fireT > every) {
+              s.fireT = 0;
+              if (s.ph === 1) s.fire.push({ x: s.bx, y: 32, vx: 0, vy: 42 * speed });
+              else for (const vx of [-15, 0, 15]) s.fire.push({ x: s.bx, y: 32, vx: vx * speed, vy: 40 * speed });
+              sfx('pop');
+            }
+          } else {
+            // phase 3: hover with the heart showing, then lock on, dive, and climb back up
+            s.mt += dt;
+            const warnFor = 0.7 / Math.sqrt(speed);
+            if (s.mode === 'hover') {
+              // the heart only shows after a dive, and hides again once it's hit
+              if (s.mt < dt * 1.5) s.open = s.dived;
+              if (s.mt > 1.6) { s.mode = 'warn'; s.mt = 0; s.tx = clamp(s.hx, 20, 80); s.open = false; sfx('alarm'); }
+            } else if (s.mode === 'warn') {
+              s.bx += clamp(s.tx - s.bx, -90 * dt, 90 * dt);
+              if (s.mt > warnFor) { s.mode = 'dive'; s.mt = 0; }
+            } else if (s.mode === 'dive') {
+              s.by += 120 * Math.sqrt(speed) * dt;
+              if (s.by >= 80) { s.by = 80; s.mode = 'rise'; s.mt = 0; sfx('land'); }
+            } else if (s.mode === 'rise') {
+              s.by -= 55 * dt;
+              if (s.by <= 21) { s.by = 21; s.mode = 'hover'; s.mt = 0; s.dived = true; }
+            }
+            if ((s.mode === 'dive' || s.mode === 'rise') && s.by > 66 && Math.abs(s.bx - s.hx) < 13) hitMe();
+          }
         }
+        for (const f of s.fire) { f.x += f.vx * dt; f.y += f.vy * dt; }
+        s.fire = s.fire.filter(f => f.y < 104 && f.x > -5 && f.x < 105);
+        for (const f of s.fire) if (!f.spent && Math.abs(f.x - s.hx) < 6 && f.y > 80 && f.y < 94) { f.spent = true; hitMe(); }
+        if (s.me <= 0) return;
+        // ---- player shots ----
         for (const sh of s.shots) {
           sh.y -= 140 * dt;
-          if (!sh.spent && sh.y <= 30 && Math.abs(sh.x - s.bx) < 6) {
+          if (sh.spent || paused || sh.y > s.by + 9) continue;
+          if (Math.abs(sh.x - s.bx) < 6) {
             sh.spent = true;
-            if (s.open) { s.hp--; hurt = 0.25; sfx('boom'); if (s.hp <= 0) return win(); }
-            else sfx('land');
-          } else if (!sh.spent && sh.y <= 30 && Math.abs(sh.x - s.bx) < 16) { sh.spent = true; sfx('land'); }
+            if (s.open) {
+              s.hp--; hurt = 0.25; sfx('boom');
+              if (s.ph === 3) s.open = false;
+              if (s.hp <= 0) { if (s.ph === 3) return win(); nextPhase(); }
+            } else sfx('land');
+          } else if (Math.abs(sh.x - s.bx) < 16) { sh.spent = true; sfx('land'); }
         }
         s.shots = s.shots.filter(sh => !sh.spent && sh.y > -5);
-        // draw
-        R(ctx, 0, 0, 100, 100, '#1a0820'); stars(ctx, 4, 30, '#4a2a5a');
+        draw();
+      });
+
+      function draw() {
+        R(ctx, 0, 0, 100, 100, s.ph === 3 ? '#140616' : s.ph === 2 ? '#200810' : '#1a0820');
+        stars(ctx, 4 + s.ph, 30, s.ph === 2 ? '#5a2a3a' : '#4a2a5a');
         R(ctx, 0, 92, 100, 8, '#3a2a5c');
-        const bx = s.bx + (hurt > 0 ? (Math.random() - 0.5) * 4 : 0);
-        R(ctx, bx - 18, 10, 36, 22, hurt > 0 ? '#ffffff' : '#6a3e94'); R(ctx, bx - 18, 10, 36, 2, '#a46ad0');
-        R(ctx, bx - 22, 16, 4, 10, '#6a3e94'); R(ctx, bx + 18, 16, 4, 10, '#6a3e94');
-        R(ctx, bx - 12, 14, 6, 4, '#d0463c'); R(ctx, bx + 6, 14, 6, 4, '#d0463c');
-        R(ctx, bx - 6, 22, 12, 8, s.open ? (Math.floor(s.ft * 10) % 2 ? '#ffe27a' : '#f39a3a') : '#3a2a5c');
-        if (!s.open) { R(ctx, bx - 6, 22, 12, 1, '#a46ad0'); R(ctx, bx - 1, 22, 2, 8, '#a46ad0'); }
-        for (let i = 0; i < 3; i++) R(ctx, 30 + i * 14, 4, 12, 3, i < s.hp ? '#d0463c' : '#3a2a5c');
+        const shake = hurt > 0 || boom > 0 || s.mode === 'warn' ? (Math.random() - 0.5) * 4 : 0;
+        const bx = s.bx + shake, by = s.by;
+        if (s.ph === 3 && s.mode === 'warn') {
+          // dive warning: a flashing column where it will come down
+          if (Math.floor(s.ft * 12) % 2) R(ctx, s.tx - 13, 34, 26, 58, 'rgba(208,70,60,0.25)');
+        }
+        if (s.ph < 3) {
+          const body = hurt > 0 || boom > 0 ? '#ffffff' : s.ph === 1 ? '#6a3e94' : '#8e2a2a';
+          const rim = s.ph === 1 ? '#a46ad0' : '#d0463c';
+          R(ctx, bx - 18, by - 11, 36, 22, body); R(ctx, bx - 18, by - 11, 36, 2, rim);
+          R(ctx, bx - 22, by - 5, 4, 10, body); R(ctx, bx + 18, by - 5, 4, 10, body);
+          if (s.ph === 2) { R(ctx, bx - 26, by - 9, 4, 4, '#d0463c'); R(ctx, bx + 22, by - 9, 4, 4, '#d0463c'); } // horns
+          R(ctx, bx - 12, by - 7, 6, 4, s.ph === 2 ? '#ffe27a' : '#d0463c'); R(ctx, bx + 6, by - 7, 6, 4, s.ph === 2 ? '#ffe27a' : '#d0463c');
+          if (s.ph === 2) { R(ctx, bx - 13, by - 9, 7, 1, '#1a1220'); R(ctx, bx + 6, by - 9, 7, 1, '#1a1220'); } // angry brows
+          R(ctx, bx - 6, by + 1, 12, 8, s.open ? (Math.floor(s.ft * 10) % 2 ? '#ffe27a' : '#f39a3a') : '#3a2a5c');
+          if (!s.open) { R(ctx, bx - 6, by + 1, 12, 1, rim); R(ctx, bx - 1, by + 1, 2, 8, rim); }
+        } else {
+          // final form: a dark winged shape with a glowing heart when it hovers
+          const flap = Math.floor(s.ft * 8) % 2 ? 2 : -2;
+          const body = hurt > 0 || boom > 0 ? '#ffffff' : '#2a1a34';
+          R(ctx, bx - 30, by - 6 + flap, 12, 4, '#6a3e94'); R(ctx, bx + 18, by - 6 + flap, 12, 4, '#6a3e94');
+          R(ctx, bx - 24, by - 9 + flap, 8, 4, '#6a3e94'); R(ctx, bx + 16, by - 9 + flap, 8, 4, '#6a3e94');
+          R(ctx, bx - 16, by - 10, 32, 20, body); R(ctx, bx - 16, by - 10, 32, 2, '#ffe27a');
+          R(ctx, bx - 10, by - 5, 5, 3, '#ffe27a'); R(ctx, bx + 5, by - 5, 5, 3, '#ffe27a');
+          R(ctx, bx - 8, by + 4, 16, 2, '#d0463c');
+          if (s.open) {
+            const glow = Math.floor(s.ft * 10) % 2 ? '#f08ab0' : '#ffffff';
+            R(ctx, bx - 5, by + 8, 4, 3, glow); R(ctx, bx + 1, by + 8, 4, 3, glow); R(ctx, bx - 4, by + 11, 8, 3, glow); R(ctx, bx - 2, by + 14, 4, 2, glow);
+          }
+        }
+        // boss health for this phase
+        for (let i = 0; i < MAXHP[s.ph]; i++) R(ctx, 50 - MAXHP[s.ph] * 7 + i * 14 + 1, 3, 12, 3, i < s.hp ? '#d0463c' : '#3a2a5c');
+        txt(ctx, `${s.ph}/3`, 92, 5, '#c8a0ec', 7);
         for (const f of s.fire) { R(ctx, f.x - 2, f.y - 2, 4, 4, '#f39a3a'); R(ctx, f.x - 1, f.y - 1, 2, 2, '#ffe27a'); }
         for (const sh of s.shots) R(ctx, sh.x - 0.5, sh.y - 3, 1, 5, '#9fd3f2');
         if (!(s.inv > 0 && Math.floor(s.ft * 16) % 2)) put(ctx, spr(SHIP), s.hx, 87, 1.2);
         for (let i = 0; i < s.me; i++) R(ctx, 4 + i * 5, 95, 3, 3, '#f08ab0');
-        txt(ctx, s.open ? 'SHOOT THE CORE!' : 'WAIT FOR THE CORE…', 60, 96, s.open ? '#ffe27a' : '#8a6aa8', 7);
-      });
+        const tip = s.pause > 0 ? '' : s.ph < 3 ? (s.open ? 'SHOOT THE CORE!' : 'WAIT FOR THE CORE…') : s.open ? 'HIT THE HEART!' : s.mode === 'warn' ? 'MOVE!' : s.mode === 'hover' ? 'IT’S GOING TO DIVE…' : 'DODGE!';
+        txt(ctx, tip, 60, 96, s.open ? '#ffe27a' : s.mode === 'warn' ? '#ff8a7a' : '#8a6aa8', 7);
+      }
     },
     async solve(b, s) {
+      // where a fireball will be when it reaches the ship's row
+      const landX = f => f.x + f.vx * Math.max(0, (87 - f.y) / f.vy);
+      const danger = x => {
+        let d = 99;
+        for (const f of s.fire) if (!f.spent && f.y < 95 && f.y > 20) d = Math.min(d, Math.abs(landX(f) - x), f.y > 70 ? Math.abs(f.x - x) : 99);
+        if (s.ph === 3 && s.mode !== 'hover') d = Math.min(d, Math.abs((s.mode === 'warn' ? s.tx : s.bx) - x) - 8);
+        return d;
+      };
+      const safest = () => {
+        let best = s.hx, bd = -1;
+        for (let x = 8; x <= 92; x += 4) {
+          const d = danger(x) - Math.abs(x - s.hx) * 0.02;
+          if (d > bd) { bd = d; best = x; }
+        }
+        return best;
+      };
       while (!b.over()) {
-        const tt = (82 - 30) / 140;
-        const aim = reflect(s.bx + s.bvx * tt, 20, 80);
-        const threat = s.fire.some(f => !f.spent && f.y > 50 && f.y < 95 && Math.abs(f.x - s.hx) < 9);
-        const aimSafe = !s.fire.some(f => !f.spent && f.y > 45 && f.y < 95 && Math.abs(f.x - aim) < 9);
-        if (s.open && s.openFor - s.ct > tt + 0.08 && aimSafe && !s.shots.length) { await b.tap({ x: aim, y: 88 }); await b.wait(60); }
-        else if (threat) {
-          let best = s.hx, bd = -1;
-          for (let x = 8; x <= 92; x += 4) {
-            const d = Math.min(...s.fire.filter(f => !f.spent && f.y > 45).map(f => Math.abs(f.x - x)), 99);
-            if (d > bd) { bd = d; best = x; }
-          }
-          await b.tap({ x: best, y: 88 });
-        } else await b.wait(10);
+        const tt = (82 - (s.by + 9)) / 140;
+        const aim = reflect(s.bx + (s.ph === 3 && s.mode !== 'hover' ? 0 : s.bvx * tt), 20, 80);
+        const left = s.ph < 3 ? s.openFor - s.ct : 1.6 - s.mt;
+        const canShoot = s.pause <= 0 && s.open && left > tt + 0.06 && s.shots.length < 2 && danger(aim) > 9;
+        if (canShoot) { await b.tap({ x: aim, y: 88 }); await b.wait(90); }
+        else if (danger(s.hx) < 10) { await b.tap({ x: safest(), y: 88 }); await b.wait(30); }
+        else await b.wait(10);
       }
     },
   },
