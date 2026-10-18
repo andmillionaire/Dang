@@ -20,8 +20,12 @@ export const SECTIONS = [
   { key: 'gross', name: 'Gross-Out', themes: ['gross'], length: 10, reward: 15 },
   { key: 'cozy', name: 'Cabin Life', themes: ['cozy'], length: 10, reward: 15 },
   { key: 'wild', name: 'Magic, Sport & Silly', themes: ['magic', 'sport', 'silly'], length: 10, reward: 15 },
-  { key: 'funtendo', name: 'Funtendo', themes: ['funtendo'], length: 14, reward: 25 },
+  { key: 'fun-mario', name: 'Funtendo: Mario & Blocks', themes: ['funtendo'], prefix: 'fm-', length: 12, reward: 20 },
+  { key: 'fun-zelda', name: 'Funtendo: Zelda & Friends', themes: ['funtendo'], prefix: 'fz-', length: 12, reward: 20 },
+  { key: 'fun-poke', name: 'Funtendo: Pokémon & Crossing', themes: ['funtendo'], prefix: 'fp-', length: 12, reward: 20 },
+  { key: 'fun-mix', name: 'Funtendo: Mix-Up', themes: ['funtendo'], prefix: 'fx-', length: 12, reward: 20 },
 ];
+const sectionList = sec => ALL.filter(m => sec.themes.includes(m.theme) && (!sec.prefix || m.id.startsWith(sec.prefix)));
 
 // DANG! Micro Mayhem: WarioWare-style microgames back to back. Four lives, faster every five,
 // a boss every ten. Your score is how many you clear.
@@ -142,7 +146,7 @@ export function mountMicro(root, { sfx, changed, back }) {
       header('Pick a set · not scored', title),
       h('div', { class: 'arc-scroll' },
         SECTIONS.map(sec => {
-          const list = ALL.filter(m => sec.themes.includes(m.theme));
+          const list = sectionList(sec);
           const boss = list.filter(m => m.boss);
           const done = M.sections[sec.key];
           return h('button', { class: 'mm-sec' + (done ? ' done' : ''), disabled: !boss.length || list.length < 3, onclick: () => runSection(sec) },
@@ -153,7 +157,7 @@ export function mountMicro(root, { sfx, changed, back }) {
   }
 
   async function runSection(sec) {
-    const list = ALL.filter(m => sec.themes.includes(m.theme));
+    const list = sectionList(sec);
     const boss = shuffle(list.filter(m => m.boss))[0];
     const plan = [...shuffle(list.filter(m => !m.boss)).slice(0, sec.length), boss];
     let lives = LIVES, quit = false;
@@ -225,15 +229,14 @@ export function mountMicro(root, { sfx, changed, back }) {
     const groups = Object.entries(THEMES).map(([k, name]) => [name, ALL.filter(m => m.theme === k)]).filter(([, l]) => l.length);
     const seen = Object.keys(M.seen).length;
     frame(
-      header(`${seen}/${ALL.length} found · tap one to practise`, title),
+      header(`${seen}/${ALL.length} played · tap any to practise`, title),
       h('div', { class: 'arc-scroll' },
         groups.map(([name, list]) => h('div', { class: 'tier' },
           h('p', { class: 'slot-label' }, `${name} · ${list.filter(m => M.seen[m.id]).length}/${list.length}`),
           h('div', { class: 'mm-grid' }, list.map(m => h('button', {
             class: 'mm-card' + (M.cleared[m.id] ? ' done' : M.seen[m.id] ? ' seen' : '') + (m.boss ? ' boss' : ''),
-            disabled: !M.seen[m.id],
             onclick: () => practise(m),
-          }, M.seen[m.id] ? m.cmd : '?')))))));
+          }, m.cmd)))))));
   }
 
   async function practise(m) {

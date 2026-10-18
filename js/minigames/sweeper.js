@@ -193,7 +193,7 @@ export function safeMove(st) {
 
 // Storm Sweeper (the 4-in-a-row tile).
 export function play(root, { difficulty: d, sfx, boost, extraHeart }) {
-  const [n, mines] = d < 0.3 ? [6, 5] : d < 0.6 ? [7, 8] : [8, 11];
+  const [n, mines] = d < 0.3 ? [6, 2] : d < 0.6 ? [7, 5] : [8, 9];
   const lives = 1 + (boost === 'tea' ? 1 : 0) + (extraHeart ? 1 : 0);
   const limit = (75 - 15 * d + (boost === 'toast' ? 30 : 0)) * 1000;
   const ui = mount(root, { title: 'Storm Sweeper', tip: 'Clear every safe cloud. Numbers count the lightning clouds touching that square. Long-press (or switch to flag mode) to flag lightning. Your first tap is always safe.' });

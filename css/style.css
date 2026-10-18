@@ -886,6 +886,9 @@ body.jp-shake #app, body.jp-shake .app { animation: shake .12s infinite; }
 .csw-cell.clue { background: #2a3458; color: #9fd3f2; cursor: default; }
 .csw-cell.clue.ok { color: #8fe08a; }
 .csw-cell.clue.over { color: #ff6a6a; }
+.csw-cell.locked { background: #e6d3a8; cursor: default; }
+.csw-cell .md-dot { width: 8px; height: 8px; }
+.csw-tools { display: flex; justify-content: center; margin-top: 8px; }
 .csw-cell.wrong { animation: shake .3s; background: #f0a0a0; }
 .csw-grid { gap: 2px; }
 

@@ -192,6 +192,18 @@ export function playStarPegs(root, { level: L, sfx, title, tip, extraBalls = 0, 
   }
 
   function givePower(forced) {
+    // a second green while a power is still running tops up that same power instead of swapping it
+    if (power && !forced) {
+      const kind = power.kind;
+      power.shots += 2;
+      powerFresh = true;
+      say(`More ${POWERS[kind].name}!`, POWERS[kind].color, true);
+      ui.status(`${POWERS[kind].name} topped up: lasts this shot and ${power.shots} more.`);
+      sfx('sparkle');
+      if (kind === 'fire') live.forEach(b => (b.fireT = 150));
+      if (kind === 'big') live.forEach(b => (b.r = 4));
+      return;
+    }
     const kind = forced || POWER_KEYS[(Math.random() * POWER_KEYS.length) | 0];
     power = { kind, shots: 2 };
     powerFresh = true;
@@ -222,6 +234,7 @@ export function playStarPegs(root, { level: L, sfx, title, tip, extraBalls = 0, 
   S.aimAt = (x, y) => { setAim({ x, y }); shoot(); };
   S.pegs = pegs;
   S.give = kind => { givePower(kind); powerFresh = false; hud(); };
+  S.green = () => { givePower(); hud(); return power && { ...power }; };
 
   function shoot() {
     if (shooting || done || balls <= 0) return;

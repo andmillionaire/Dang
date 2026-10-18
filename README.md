@@ -61,7 +61,7 @@ Mashups are fused games, not reskins:
 | Mashup | How it plays |
 | --- | --- |
 | Peg Sweeper | Star Pegs where some plain pegs are hidden storm clouds (hitting one costs a ball) and number pegs count the clouds nearby. Read the numbers and aim around the storm. |
-| Cat Sweeper | A Mewdoku with no colours: one cat per row and column, no touching, and number squares say how many cats touch them. Just enough numbers for one answer. |
+| Cat Sweeper | A Mewdoku with no colours: one cat per row and column, no touching, and number squares say how many cats touch them. Just enough numbers for one answer. One cat starts already in its right spot, and **Auto ✕** dots every square that can't hold a cat (ruled out by a placed cat, or next to a number that already has all its cats). |
 | Word Sweeper | Three words are buried under clouds. Each dig shows a letter, or a number counting the buried letters around it. Dig up every word before you run out of digs. |
 | Cat Pegs | A Mewdoku grid sits under the bins. Pick a row, shoot, and the bin the ball lands in picks the column for your cat. |
 | Letter Pegs | Hit the letter pegs in spelling order to answer a clue. Hitting the wrong letters costs a ball. |
@@ -75,7 +75,7 @@ Chain reactions call out **Dang!**, then Lovely!, Magical!, Spellbinding!. Every
 
 ## Storm Sweeper
 
-Minesweeper under rain clouds. Some clouds hide lightning; numbers count the lightning clouds touching each square. Tap to clear, long-press (or switch to flag mode) to flag. Your first tap is always safe, and every board is generated so it can be cleared with logic alone, with no 50/50 guesses. Boards grow from 6×6 with 5 bolts to 8×8 with 11, against a fuse. Catnip Tea adds a heart, Honey Toast adds time, the Cozy Scarf pre-flags two bolts, and the Saturn Guardian Uniform gives an extra heart in every Sweeper game.
+Minesweeper under rain clouds. Some clouds hide lightning; numbers count the lightning clouds touching each square. Tap to clear, long-press (or switch to flag mode) to flag. Your first tap is always safe, and every board is generated so it can be cleared with logic alone, with no 50/50 guesses. Boards grow from 6×6 with just 2 bolts to 7×7 with 5 and 8×8 with 9, against a fuse. Catnip Tea adds a heart, Honey Toast adds time, the Cozy Scarf pre-flags two bolts, and the Saturn Guardian Uniform gives an extra heart in every Sweeper game.
 
 ## Magic tiles
 
@@ -121,7 +121,7 @@ A Peggle-style cartridge with 200 levels: 20 themed peg layouts (Heart, Saturn, 
 
 - A rounded bucket slides along the bottom: land the ball in it for a free ball.
 - Points: blue 10, orange 100, purple 500, times a multiplier that climbs as the oranges go (x2, x3, x5, x10). A single shot worth 2,500 / 7,500 / 12,500 earns free balls. One purple bonus peg moves somewhere new every shot.
-- Two green pegs per level each give a random power-up for the rest of that shot and the next two: Super Guide, Spooky Ball, Multiball, Fireball, Moon Ball, Flippers, Wide Bucket, Star Blast, Orange Magnet and Double Points.
+- Two green pegs per level each give a random power-up for the rest of that shot and the next two: Super Guide, Spooky Ball, Multiball, Fireball, Moon Ball, Flippers, Wide Bucket, Star Blast, Orange Magnet and Double Points. Hitting the second green while a power is still running tops up that same power (two more shots) instead of swapping it.
 - Light the last orange and it's Fever: slow motion and bonus bins worth up to 50,000.
 - Stars come from your score, first clears pay coins, and the leaderboard ranks the total of your best scores.
 
@@ -133,7 +133,7 @@ The charged Star Pegs tile on the board plays one of these layouts too (`js/pegs
 
 ### DANG! Micro Mayhem
 
-WarioWare-style microgames back to back: a one-line command, a fuse of about 5 seconds, one quick task. You get four lives. It speeds up every five clears, and every tenth is a multi-phase boss fight that can run up to 30 seconds. **Endless** mode scores how many you clear in one run and posts it to a shared high-score leaderboard. **Sections** let you pick a set (Retro Remix, Gross-Out, Cabin Life, Magic Sport & Silly, or Funtendo), play a run of its microgames and finish on its boss. Sections aren't scored; clearing one pays coins, double the first time. Every microgame you meet is added to the **Collection**, where you can practise it.
+WarioWare-style microgames back to back: a one-line command, a fuse of about 5 seconds, one quick task. You get four lives. It speeds up every five clears, and every tenth is a multi-phase boss fight that can run up to 30 seconds. **Endless** mode scores how many you clear in one run and posts it to a shared high-score leaderboard. **Sections** let you pick a set (Retro Remix, Gross-Out, Cabin Life, Magic Sport & Silly, or one of the four Funtendo sets: Mario & Blocks, Zelda & Friends, Pokémon & Crossing and Mix-Up, each ending on its own boss), play a run of its microgames and finish on its boss. Sections aren't scored; clearing one pays coins, double the first time. The **Collection** lists every microgame, and you can practise any of them, even ones you haven't met in a run yet.
 
 The microgames come in themed sets: Retro Remix (quick-fire takes on classic video game challenges), Gross-Out (plunge the toilet, pick the nose...), Cabin Life, Magical, Sporty, Silly, Wordy, and **Funtendo**: 100+ parodies of classic Nintendo moments (Mario, Tetris, Dr. Mario, Zelda, Kirby, Metroid, Pokémon with lots of Ditto and Eevee, Animal Crossing, Duck Hunt, Punch-Out!!, Smash and more), a few with a magical-girl twist, and four bosses of their own. Each one is a small object in `js/micro/` with a `setup(api)` that builds it and a `solve(bot)` that plays it. `node tools/test_micros.mjs` (with the dev server running) plays every microgame through its own `solve()` at normal and double speed, so each one is proven winnable. The shared engine, helpers and test bot are in `js/micro/kit.js`.
 

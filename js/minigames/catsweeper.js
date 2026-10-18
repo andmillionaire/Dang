@@ -54,13 +54,18 @@ export function play(root, { difficulty: d, sfx, boost, extraHeart }) {
   let lives = max, done = false;
   const cat = new Array(N * N).fill(false);
   const R = i => (i / N) | 0, C = i => i % N;
-  const ui = mount(root, { title: 'Cat Sweeper', tip: 'One cat in every row and column, and cats can’t touch, not even diagonally. Each number says how many cats touch that square. Tap to place or remove a cat.' });
+  // one cat starts in its right spot (locked), to get you going
+  const r0 = (Math.random() * N) | 0, locked = r0 * N + sol[r0];
+  cat[locked] = true;
+  let autoX = false;
+  const ui = mount(root, { title: 'Cat Sweeper', tip: 'One cat in every row and column, and cats can’t touch, not even diagonally. Each number says how many cats touch that square. Tap to place or remove a cat. One cat is already in place.' });
   const stat = h('span', { class: 'mg-stat' });
   ui.info.append(stat);
   const act = {};
+  const autoBtn = h('button', { type: 'button', class: 'seg-btn', onclick: () => { autoX = !autoX; autoBtn.classList.toggle('on', autoX); sfx('select'); render(); } }, 'Auto ✕');
   const cells = [...Array(N * N).keys()].map(i => h('button', { type: 'button', class: 'csw-cell' + (clues.has(i) ? ' clue' : ''), onpointerdown: e => { e.preventDefault(); act.tap(i); } }));
-  ui.body.append(h('div', { class: 'sw-wrap' }, h('div', { class: 'sw-grid csw-grid', style: `grid-template-columns: repeat(${N}, 1fr)` }, cells)));
-  root.__cs = { sol, N, clues };
+  ui.body.append(h('div', { class: 'sw-wrap' }, h('div', { class: 'sw-grid csw-grid', style: `grid-template-columns: repeat(${N}, 1fr)` }, cells)), h('div', { class: 'md-tools csw-tools' }, autoBtn));
+  root.__cs = { sol, N, clues, locked };
 
   const placed = () => [...Array(N * N).keys()].filter(i => cat[i]);
   const around = i => placed().filter(j => j !== i && Math.abs(R(j) - R(i)) <= 1 && Math.abs(C(j) - C(i)) <= 1).length;
@@ -72,7 +77,13 @@ export function play(root, { difficulty: d, sfx, boost, extraHeart }) {
         b.dataset.k = k;
         b.classList.toggle('ok', have === k);
         b.classList.toggle('over', have > k);
-      } else b.replaceChildren(cat[i] ? icon('cat' + (C(i) % CAT_BREEDS.length), 'ico cat') : '');
+      } else {
+        // auto ✕: squares a placed cat rules out, or next to a number that already has all its cats
+        const near = (a, b) => Math.abs(R(a) - R(b)) <= 1 && Math.abs(C(a) - C(b)) <= 1;
+        const ruledOut = autoX && !cat[i] && (placed().some(j => R(j) === R(i) || C(j) === C(i) || near(i, j)) || [...clues].some(([k, v]) => near(i, k) && around(k) === v));
+        b.replaceChildren(cat[i] ? icon('cat' + (C(i) % CAT_BREEDS.length), 'ico cat') : ruledOut ? h('span', { class: 'md-dot' }) : '');
+        b.classList.toggle('locked', i === locked);
+      }
     });
     stat.replaceChildren(...heartRow(lives, max), ` ${N - placed().length} cats to place`);
   }
@@ -88,7 +99,7 @@ export function play(root, { difficulty: d, sfx, boost, extraHeart }) {
       resolve(res);
     }
     act.tap = i => {
-      if (done || clues.has(i)) return;
+      if (done || clues.has(i) || i === locked) return;
       if (cat[i]) { cat[i] = false; sfx('select'); render(); return; }
       // breaking a rule (row, column, touching, or a number going over) costs a heart
       const clash = placed().some(j => R(j) === R(i) || C(j) === C(i) || (Math.abs(R(j) - R(i)) <= 1 && Math.abs(C(j) - C(i)) <= 1));
