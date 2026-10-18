@@ -602,7 +602,7 @@ export default [
       css();
       stage.classList.add('cz-floor');
       const pile = place(stage, div('cz-dust'), 16, 70);
-      place(stage, sprite(DUSTPAN, {}, 22, 'cz-pan'), 88, 72);
+      place(stage, sprite(DUSTPAN, {}, 22, 'cz-dustpan'), 88, 72);
       note(stage, 'Swipe right to sweep');
       const s = expose({ x: 16 });
       let done = false;
