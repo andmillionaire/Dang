@@ -881,81 +881,163 @@ export default [
   },
 
   {
-    id: 'gr-bathroom', cmd: 'Clean up!', theme: 'gross', time: 13, boss: true,
+    id: 'gr-bathroom', cmd: 'Clean up!', theme: 'gross', time: 24, boss: true,
     setup(api) {
-      const { win, sfx, speed, pos, stage } = api;
+      const { win, lose, sfx, speed, pos, stage } = api;
       const c = board(api);
-      // three jobs in a row: squash the bugs, scrub the mirror, plunge the toilet
+      // Five jobs: squash the bugs, scrub the mirror, plunge the toilet, mop the puddles,
+      // then shove the Clog Monster back down the toilet three times.
       const s = api.expose({
         step: 0,
-        bugs: [0, 1].map(() => ({ x: 20 + Math.random() * 60, y: 60 + Math.random() * 28, a: Math.random() * 6, dead: false })),
-        grime: 0, py: 40, pumps: 0, need: 3,
+        bugs: Array.from({ length: speed > 1.5 ? 4 : 3 }, () => ({ x: 15 + Math.random() * 55, y: 62 + Math.random() * 22, a: Math.random() * 6, dead: false })),
+        grime: 0, py: 40, clog: 0,
+        puddles: [{ x: 18, y: 70 }, { x: 44, y: 80 }, { x: 62, y: 66 }].map(q => ({ ...q, wet: 1 })),
+        mon: { up: 0, wait: 0.5, pushes: 0, need: 3, slap: 0 },
       });
       let last = null, low = false;
-      const STEPS = ['Squash the bugs!', 'Scrub the mirror!', 'Plunge the toilet!'];
-      const next = () => { s.step++; sfx('ring'); if (s.step >= 3) win(); };
+      const TITLES = ['Squash the bugs!', 'Scrub the mirror!', 'Plunge it!', 'Mop it up!', 'Clog Monster!'];
+      const monY = () => 74 - s.mon.up * 30;
+      const next = () => {
+        s.step++;
+        sfx('ring');
+        if (s.step >= 5) return win();
+        api.phase(s.step + 1, TITLES[s.step]);
+      };
+      setTimeout(() => { if (s.step === 0) api.phase(1, TITLES[0]); }, 900);
       follow(stage, pos, (p, ph) => {
         if (ph === 'hover') return;
         if (s.step === 0 && ph === 'down') {
-          const bg = s.bugs.find(q => !q.dead && dist(q, p) < 10);
+          const bg = s.bugs.find(q => !q.dead && dist(q, p) < 11);
           if (bg) { bg.dead = true; sfx('pop', 1); if (s.bugs.every(q => q.dead)) next(); }
-        } else if (s.step === 1 && ph === 'move' && last && p.y < 50 && p.x > 26 && p.x < 74) {
+        } else if (s.step === 1 && ph === 'move' && last && p.y < 50 && p.x > 22 && p.x < 78) {
           s.grime += dist(p, last);
-          if (s.grime > 150) next();
+          if (s.grime > 160) next();
         } else if (s.step === 2 && ph !== 'up') {
           s.py = clamp(p.y, 40, 80);
           if (s.py > 70 && !low) low = true;
-          if (s.py < 50 && low) { low = false; s.pumps++; sfx('pop', s.pumps); if (s.pumps >= s.need) next(); }
+          if (s.py < 50 && low) { low = false; s.clog = Math.min(1, s.clog + 0.27); sfx('pop', 2); if (s.clog >= 1) next(); }
+        } else if (s.step === 3 && ph === 'move' && last) {
+          const d = dist(p, last);
+          for (const q of s.puddles) if (q.wet > 0 && dist(q, p) < 12) {
+            q.wet -= d / 45;
+            if (q.wet <= 0) { q.wet = 0; sfx('drip'); if (s.puddles.every(z => z.wet <= 0)) next(); }
+          }
+        } else if (s.step === 4 && ph === 'down') {
+          const m = s.mon;
+          if (m.up > 0.25 && dist(p, { x: 86, y: monY() }) < 14) {
+            m.pushes++; m.up = 0; m.wait = 0.7 / speed; m.slap = 1; sfx('boom');
+            if (m.pushes >= m.need) next();
+          }
         }
         last = ph === 'up' ? null : p;
       });
       loop(api, (dt, t) => {
-        if (s.step !== 0) return;
-        for (const q of s.bugs) {
-          if (q.dead) continue;
-          q.a += Math.sin(t * 4 + q.x) * dt * 3;
-          q.x += Math.cos(q.a) * (22 + 10 * speed) * dt; q.y += Math.sin(q.a) * (22 + 10 * speed) * dt;
-          if (q.x < 8 || q.x > 92) { q.a = Math.PI - q.a; q.x = clamp(q.x, 8, 92); }
-          if (q.y < 58 || q.y > 94) { q.a = -q.a; q.y = clamp(q.y, 58, 94); }
+        if (s.step === 0) {
+          for (const q of s.bugs) {
+            if (q.dead) continue;
+            q.a += Math.sin(t * 4 + q.x) * dt * 3;
+            q.x += Math.cos(q.a) * (20 + 10 * speed) * dt; q.y += Math.sin(q.a) * (20 + 10 * speed) * dt;
+            if (q.x < 8 || q.x > 72) { q.a = Math.PI - q.a; q.x = clamp(q.x, 8, 72); }
+            if (q.y < 60 || q.y > 88) { q.a = -q.a; q.y = clamp(q.y, 60, 88); }
+          }
+        } else if (s.step === 2) {
+          // the clog fights back: stop plunging and it creeps back
+          s.clog = Math.max(0, s.clog - 0.1 * speed * dt);
+        } else if (s.step === 4) {
+          const m = s.mon;
+          m.slap = Math.max(0, m.slap - dt * 3);
+          if (m.wait > 0) m.wait -= dt;
+          else {
+            m.up += 0.45 * speed * dt;
+            if (m.up >= 1) { sfx('fizzle'); lose(); }
+          }
         }
       }, t => {
+        // the room gets cleaner with every job done
+        const dirt = Math.max(0, 1 - s.step / 4);
         tiles(c);
         R(c, 0, 56, 100, 44, '#a8c8d8');
+        if (dirt > 0) {
+          c.fillStyle = `rgba(122,140,60,${0.35 * dirt})`; c.fillRect(0, 0, 100, 100);
+          for (let k = 0; k < 10; k++) if (k < dirt * 10) R(c, (k * 37) % 92 + 2, (k * 23) % 50 + 50, 3, 2, `rgba(80,90,30,${dirt})`);
+        }
         // mirror
         R(c, 25, 6, 50, 42, INK); R(c, 26, 7, 48, 40, '#dff4ff');
-        const g = Math.max(0, 1 - s.grime / 150);
+        const g = Math.max(0, 1 - s.grime / 160);
         if (g > 0) { c.fillStyle = `rgba(122,140,60,${0.85 * g})`; c.fillRect(26, 7, 48, 40); for (let k = 0; k < 8; k++) R(c, 30 + (k * 13) % 40, 10 + (k * 7) % 32, 3, 2, `rgba(80,90,30,${g})`); }
-        else R(c, 30, 10, 4, 12, '#ffffff');
+        else { R(c, 30, 10, 4, 12, '#ffffff'); R(c, 36, 10, 2, 6, '#ffffff'); }
+        if (s.step === 1) txt(c, 'scrub!', 50, 28, '#3a4a10', 9);
+        // puddles
+        for (const q of s.puddles) {
+          if (s.step < 3 || q.wet <= 0) continue;
+          oval(c, q.x, q.y, 10 * q.wet + 2, 4 * q.wet + 1, '#7ab0d8');
+          R(c, q.x - 3, q.y - 1, 3, 1, '#d8f0ff');
+        }
+        if (s.step === 3) { const m = Math.floor(t * 4) % 2; R(c, 6, 60, 2, 10 + m, '#c07a3a'); R(c, 3, 70 + m, 8, 4, '#efdcb4'); }
         // toilet
-        R(c, 78, 52, 18, 12, INK); R(c, 79, 53, 16, 10, '#f4f4f8');
-        oval(c, 86, 76, 12, 9, INK); oval(c, 86, 76, 11, 8, '#f4f4f8'); oval(c, 86, 75, 8, 5, '#8a7a4a');
-        if (s.step === 2) { R(c, 85, s.py - 26, 3, 26, '#c07a3a'); oval(c, 86, s.py + 1, 7, 3, '#d0463c'); R(c, 8, 92, 60, 3, INK); R(c, 8, 92, 60 * s.pumps / s.need, 3, '#6fb04a'); }
+        R(c, 78, 50, 18, 13, INK); R(c, 79, 51, 16, 11, '#f4f4f8');
+        oval(c, 86, 76, 12, 9, INK); oval(c, 86, 76, 11, 8, '#f4f4f8');
+        oval(c, 86, 75, 8, 5, s.step >= 4 ? '#7ab0d8' : s.step === 3 ? '#9fd3f2' : '#8a7a4a');
+        if (s.step === 2) {
+          R(c, 85, s.py - 26, 3, 26, '#c07a3a'); oval(c, 86, s.py + 1, 7, 3, '#d0463c');
+          R(c, 8, 86, 60, 4, INK); R(c, 9, 87, 58 * s.clog, 2, '#6fb04a');
+          txt(c, 'pump up & down!', 38, 80, '#1a1220', 7);
+        }
+        if (s.step === 4) {
+          // the overflow
+          for (let k = 0; k < 3; k++) R(c, 74 + k * 7, 82 + ((t * 30 + k * 5) % 12), 2, 3, '#7ab0d8');
+          const m = s.mon, y = monY(), wob = Math.sin(t * 9) * 1.5;
+          if (m.up > 0.02) {
+            oval(c, 86 + wob, y, 10, Math.min(12, 3 + m.up * 14), INK);
+            oval(c, 86 + wob, y, 9, Math.min(11, 2 + m.up * 14), '#8ac850');
+            if (m.up > 0.15) {
+              disc(c, 82 + wob, y - 4, 3, '#fff4e0'); disc(c, 90 + wob, y - 4, 3, '#fff4e0');
+              R(c, 82 + wob, y - 4, 1.5, 1.5, INK); R(c, 90 + wob, y - 5, 1.5, 1.5, INK);
+              R(c, 82 + wob, y + 2, 8, 2, INK); R(c, 86 + wob, y + 3, 2, 2, '#f08ab0');
+              R(c, 76 + wob, y - 2 - Math.sin(t * 12) * 3, 3, 6, '#8ac850'); R(c, 93 + wob, y - 2 + Math.sin(t * 12) * 3, 3, 6, '#8ac850');
+            }
+          }
+          if (m.slap > 0) { R(c, 74, 62, 24, 4, INK); R(c, 75, 63, 22, 2, '#f4f4f8'); txt(c, 'SLAP!', 70, 56, '#ffe27a', 9); }
+          for (let k = 0; k < m.need; k++) disc(c, 32 + k * 8, 87, 3, k < m.pushes ? '#6fb04a' : '#3a4a10');
+          txt(c, 'tap it back down!', 40, 79, '#1a1220', 7);
+        }
         for (const q of s.bugs) {
-          if (q.dead) { oval(c, q.x, q.y, 5, 2, '#4a3020'); continue; }
+          if (q.dead) { if (s.step < 3) oval(c, q.x, q.y, 5, 2, '#4a3020'); continue; }
           const l = (t * 20 | 0) % 2;
           for (let k = -1; k <= 1; k++) { R(c, q.x - 5, q.y + k * 3 + l, 2, 1, INK); R(c, q.x + 4, q.y + k * 3 - l, 2, 1, INK); }
           oval(c, q.x, q.y, 4, 4, '#5a3418');
         }
-        if (s.step < 3) {
-          R(c, 0, 49, 100, 9, 'rgba(26,18,32,0.75)');
-          txt(c, `${s.step + 1}/3  ${STEPS[s.step]}`, 50, 54, '#ffe27a', 8);
-        }
+        // job tracker
+        R(c, 0, 92, 100, 8, 'rgba(26,18,32,0.8)');
+        for (let k = 0; k < 5; k++) R(c, 4 + k * 6, 94, 4, 4, k < s.step ? '#6fb04a' : k === s.step ? '#ffe27a' : '#4a3a5a');
+        if (s.step < 5) txt(c, TITLES[s.step], 64, 96.5, '#ffe27a', 7);
       });
     },
     async solve(b, s) {
       while (!b.over() && s.step === 0) { const q = s.bugs.find(q => !q.dead); if (q) await b.tap({ x: q.x, y: q.y }); await b.wait(20); }
       if (s.step === 1) {
         b.down({ x: 30, y: 15 });
-        for (let i = 0; !b.over() && s.step === 1 && i < 300; i++) { b.move({ x: i % 2 ? 70 : 30, y: 12 + (i % 7) * 5 }); await b.wait(16); }
+        for (let i = 0; !b.over() && s.step === 1 && i < 400; i++) { b.move({ x: i % 2 ? 72 : 28, y: 12 + (i % 7) * 5 }); await b.wait(16); }
         b.up({ x: 50, y: 20 });
       }
       if (s.step === 2) {
         b.down({ x: 86, y: 45 });
-        while (!b.over()) {
+        while (!b.over() && s.step === 2) {
           for (const y of [55, 66, 78]) { b.move({ x: 86, y }); await b.wait(20); }
           for (const y of [66, 55, 44]) { b.move({ x: 86, y }); await b.wait(20); }
         }
         b.up({ x: 86, y: 45 });
+      }
+      while (!b.over() && s.step === 3) {
+        const q = s.puddles.find(z => z.wet > 0);
+        if (!q) { await b.wait(20); continue; }
+        b.down({ x: q.x - 6, y: q.y });
+        for (let i = 0; !b.over() && q.wet > 0 && i < 200; i++) { b.move({ x: q.x + (i % 2 ? 6 : -6), y: q.y + (i % 3) - 1 }); await b.wait(16); }
+        b.up({ x: q.x, y: q.y });
+      }
+      while (!b.over() && s.step === 4) {
+        if (s.mon.up > 0.35) { await b.tap({ x: 86, y: 74 - s.mon.up * 30 }); await b.wait(60); }
+        else await b.wait(16);
       }
     },
   },
