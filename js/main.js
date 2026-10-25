@@ -280,7 +280,7 @@ function explainMagic(kind) {
   S.seen['mg_' + kind] = true;
   persist();
   const M = MAGIC_INFO[kind];
-  toast(`You made a ${M.name}! Tap it or swap it and it ${M.does}.`);
+  toast(kind === 'orb' ? `You made a ${M.name}! Swap it with any tile and it ${M.does}.` : `You made a ${M.name}! Match it like a normal tile and it ${M.does}.`);
 }
 
 async function runSpecial(b, kinds) {
@@ -569,6 +569,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   // half hour. When one has installed, offer a reload (never mid-game on its own).
   const hadController = !!navigator.serviceWorker.controller;
   addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    if (!reg) return;
     const check = () => reg.update().catch(() => {});
     addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
     setInterval(check, 30 * 60 * 1000);

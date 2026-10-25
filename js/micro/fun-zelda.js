@@ -303,6 +303,7 @@ const games = [
     async solve(b, s) {
       while (!b.over()) {
         b.down({ x: 50, y: 55 });
+        await b.until(() => s.holding || s.reveal, 400);
         await b.until(() => s.bar >= 0.8 || !s.holding);
         b.up({ x: 50, y: 55 });
         await b.wait(80);

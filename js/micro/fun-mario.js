@@ -96,24 +96,36 @@ const PSWITCH = ['..UUUU..', '.UUwwUU.', '.UwUUwU.', '.UwwwUU.', '.UwUUUU.', 'UU
 
 const heroHy = (jt, T, H) => (jt >= 0 ? Math.sin((Math.PI * jt) / T) * H : 0);
 
-// Tap, swipe and drag on one stage. tap(p) fires on release for short, still presses.
-function gestures(stage, pos, { tap, swipe, drag }) {
+// Tap, swipe and drag on one stage. With only a tap (or while tapNow() says swipes don't matter),
+// it fires the instant the finger lands; otherwise a tap is a short, still press, fired on release.
+function gestures(stage, pos, { tap, swipe, drag, tapNow }) {
   let st = null;
+  const instant = () => tap && ((!swipe && !drag) || (tapNow && tapNow()));
   stage.addEventListener('pointerdown', e => {
     e.preventDefault();
     const p = pos(e);
+    if (instant()) { tap(p); return; }
     st = { p, t: performance.now() };
     try { stage.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
     drag && drag(p, 'down');
   });
-  stage.addEventListener('pointermove', e => { if (st && drag) drag(pos(e), 'move'); });
+  const dirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+  stage.addEventListener('pointermove', e => {
+    if (!st) return;
+    const p = pos(e);
+    if (drag) drag(p, 'move');
+    // a swipe counts as soon as the finger has travelled far enough, not when it lifts
+    const dx = p.x - st.p.x, dy = p.y - st.p.y;
+    if (swipe && !st.swiped && Math.hypot(dx, dy) >= 12) { st.swiped = true; swipe(dirOf(dx, dy), dx, dy); }
+  });
   const up = e => {
     if (!st) return;
     const p = pos(e), dx = p.x - st.p.x, dy = p.y - st.p.y, d = Math.hypot(dx, dy), held = performance.now() - st.t, s0 = st;
     st = null;
     drag && drag(p, 'up', d < 5 && held < 350);
+    if (s0.swiped) return;
     if (d < 5 && held < 350) tap && tap(s0.p);
-    else if (d >= 12 && swipe) swipe(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'), dx, dy);
+    else if (d >= 12 && swipe) swipe(dirOf(dx, dy), dx, dy);
   };
   stage.addEventListener('pointerup', up);
   stage.addEventListener('pointercancel', () => (st = null));
@@ -316,6 +328,7 @@ export default [
       gestures(stage, pos, {
         tap: () => { if (s.jt < 0) { s.jt = 0; sfx('swap'); } },
         swipe: dir => { if (dir === 'right' && !s.kicked) { s.kicked = true; s.svx = 85; sfx('swap'); } },
+        tapNow: () => s.kicked, // once it's kicked, hops land the instant you touch
       });
       let tt = 0;
       frame(dt => {
@@ -576,8 +589,11 @@ export default [
       const s = expose({ hx: 22, jt: -1, duck: 0, v, bs: kinds.map((k, i) => ({ k, at: 0.55 + i * Math.max(0.9, 1.0 / speed), x: 110, on: false, passed: false })) });
       const hy = () => heroHy(s.jt, T, H);
       gestures(stage, pos, {
-        tap: () => { if (s.jt < 0 && s.duck <= 0) { s.jt = 0; sfx('swap'); } },
-        swipe: dir => { if (dir === 'down' && s.jt < 0) { s.duck = 0.7; sfx('select'); } },
+        // top half jumps, bottom half ducks: both the instant the finger lands
+        tap: p => {
+          if (p.y < 55) { if (s.jt < 0 && s.duck <= 0) { s.jt = 0; sfx('swap'); } }
+          else if (s.jt < 0 && s.duck <= 0) { s.duck = 0.7; sfx('select'); }
+        },
       });
       let tt = 0;
       frame(dt => {
@@ -606,7 +622,7 @@ export default [
         }
         if (s.duck > 0) put(ctx, spr(PLUM), s.hx, 79, 1.3, false, 0.5);
         else put(ctx, spr(s.jt >= 0 ? PLUM_J : PLUM), s.hx, 79 - hy(), 1.3);
-        txt(ctx, 'TAP = JUMP · SWIPE DOWN = DUCK', 50, 94, '#fff4e0', 7);
+        txt(ctx, 'TAP HIGH = JUMP · TAP LOW = DUCK', 50, 94, '#fff4e0', 7);
       });
     },
     async solve(b, s) {
@@ -614,8 +630,8 @@ export default [
         const bl = s.bs.find(x => x.on && !x.passed);
         if (bl) {
           const ttc = (bl.x - s.hx - 7) / s.v;
-          if (bl.k === 'low' && ttc < 0.2 && s.jt < 0) await b.tap({ x: 50, y: 40 });
-          else if (bl.k === 'high' && ttc < 0.38 && s.duck <= 0 && s.jt < 0) await b.swipe('down', { x: 50, y: 30 });
+          if (bl.k === 'low' && ttc < 0.2 && s.jt < 0) await b.tap({ x: 50, y: 30 });
+          else if (bl.k === 'high' && ttc < 0.38 && s.duck <= 0 && s.jt < 0) await b.tap({ x: 50, y: 80 });
         }
         await b.wait(8);
       }
@@ -1325,6 +1341,8 @@ export default [
       gestures(stage, pos, {
         drag: (p, ph, isTap) => {
           if (s.ph < 2) return;
+          // phase 2: a touch up in the sky jumps the instant it lands; lower down drags you about
+          if (ph === 'down' && s.ph === 2 && p.y < 45) { jump(); return; }
           if (ph === 'down' || ph === 'move') s.tx = clamp(p.x, 6, 96);
           if (ph === 'up' && isTap && s.ph === 2) jump();
         },
@@ -1411,7 +1429,7 @@ export default [
         if (!(s.inv > 0 && Math.floor(tt * 16) % 2)) put(ctx, spr(s.jt >= 0 ? PLUM_J : PLUM), s.hx, 79 - hy(), 1.3);
         for (let i = 0; i < 3; i++) R(ctx, 4 + i * 6, 4, 4, 4, i < s.hearts ? '#f08ab0' : '#3a2a3a');
         if (s.ph === 2) for (let i = 0; i < 3; i++) R(ctx, 70 + i * 9, 4, 7, 3, i < s.khp ? '#d0463c' : '#3a2a3a');
-        const tip = ['', 'TAP TO JUMP THE LOW FIRE', 'DRAG TO MOVE · TAP TO JUMP ON HIM', 'DRAG TO THE AXE · DODGE THE FIRE'][Math.min(3, s.ph)] || '';
+        const tip = ['', 'TAP TO JUMP THE LOW FIRE', 'DRAG LOW TO MOVE · TAP HIGH TO JUMP', 'DRAG TO THE AXE · DODGE THE FIRE'][Math.min(3, s.ph)] || '';
         txt(ctx, tip, 50, 95, '#fff4e0', 6);
       });
     },

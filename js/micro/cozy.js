@@ -601,10 +601,13 @@ export default [
         if (done) return;
         if (phase === 'up') { last = null; return; }
         if (p.y < 50 || p.y > 76 || p.x < 12 || p.x > 88) { last = null; return; }
-        if (last) for (let k = 1; k <= 4; k++) ink({ x: last.x + (p.x - last.x) * k / 4, y: last.y + (p.y - last.y) * k / 4 });
-        else ink(p);
+        // fill in between touch samples, so a quick scribble counts all the way along
+        const pts = last ? [1, 2, 3, 4].map(k => ({ x: last.x + (p.x - last.x) * k / 4, y: last.y + (p.y - last.y) * k / 4 })) : [p];
+        for (const q of pts) {
+          ink(q);
+          if (q.x >= 15 && q.x <= 85) bins.add(Math.min(13, Math.floor(((q.x - 15) / 70) * 14)));
+        }
         last = p;
-        if (p.x >= 15 && p.x <= 85) bins.add(Math.min(13, Math.floor(((p.x - 15) / 70) * 14)));
         if (bins.size >= 12) { done = true; sfx('coin'); win(); }
       });
     },
@@ -851,7 +854,12 @@ export default [
       });
     },
     async solve(b, s) {
-      while (!b.over()) { await b.swipe(s.cur === 'r' ? 'left' : 'right', { x: 50, y: 45 }); await b.wait(60); }
+      while (!b.over()) {
+        const n = s.n;
+        await b.swipe(s.cur === 'r' ? 'left' : 'right', { x: 50, y: 45 });
+        await b.until(() => s.n !== n, 1500); // look at the next sock before swiping again
+        await b.wait(40);
+      }
     },
   },
   {
@@ -917,7 +925,7 @@ export default [
       css();
       stage.classList.add('cz-floor');
       place(stage, sprite(LOG, {}, 28, 'cz-log'), 50, 88);
-      const w = 2.4 + 0.8 * speed, phase = Math.random() * 6;
+      const w = 2 + 0.7 * speed, phase = Math.random() * 6;
       const s = expose({ x: 20, top: 50, falling: false, n: 0 });
       let log = place(stage, sprite(LOG, {}, 28, 'cz-log'), 20, 22), y = 22, done = false;
       note(stage, 'Tap to drop');
@@ -929,7 +937,7 @@ export default [
         if (y >= target) {
           y = target;
           at(log, s.x, y);
-          if (Math.abs(s.x - s.top) < 9) {
+          if (Math.abs(s.x - s.top) < 11) {
             s.n++; s.top = s.x; s.falling = false; sfx('land');
             if (s.n >= 3) { done = true; win(); return; }
             log = place(stage, sprite(LOG, {}, 28, 'cz-log'), s.x, 22);
@@ -948,10 +956,12 @@ export default [
     },
     async solve(b, s) {
       while (!b.over()) {
-        await b.until(() => !s.falling && Math.abs(s.x - s.top) < 2);
+        await b.until(() => !s.falling && Math.abs(s.x - s.top) < 5);
         if (b.over()) break;
         await b.tap({ x: 50, y: 50 });
+        await b.until(() => s.falling);
         await b.until(() => !s.falling);
+        await b.wait(60); // the next log starts swinging a frame after the last one lands
       }
     },
   },

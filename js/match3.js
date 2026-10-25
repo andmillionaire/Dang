@@ -264,7 +264,23 @@ export class Board {
   }
 
   // ---------- turn flow ----------
-  async attemptSwap(a, b) {
+  // A turn never leaves the board stuck: if anything throws, put the board back together.
+  async attemptSwap(a, b) { return this.safely(() => this.doSwap(a, b)); }
+  async activate(p) { return this.safely(() => this.doActivate(p)); }
+  async safely(turn) {
+    try { return await turn(); } catch (err) {
+      console.error('match3 turn failed', err);
+      const gen = this.gen;
+      try {
+        for (const t of this.grid.flat()) if (t) { t.going = false; t.charged = false; t.s = 1; t.x = Math.round(t.x); t.y = Math.round(t.y); }
+        this.actors = [];
+        await this.collapse();
+      } catch (e2) { console.error('match3 recover failed', e2); }
+      if (gen === this.gen && this.running && !this.checkEnd()) { this.busy = false; this.lastInput = performance.now(); }
+    }
+  }
+
+  async doSwap(a, b) {
     if (this.moves <= 0) {
       this.hooks.toast('Out of moves!');
       return;
@@ -331,7 +347,7 @@ export class Board {
     return this.afterTurn(gen);
   }
 
-  async activate(p) {
+  async doActivate(p) {
     const gen = this.gen;
     if (this.moves <= 0) { this.hooks.toast('Out of moves!'); return; }
     this.busy = true;
@@ -590,16 +606,18 @@ export class Board {
       if (t && t.mg && !t.going && depth < 6) { t.going = true; chain.push(t); } else rest.push(p);
     }
     await fx(rest);
-    for (const t of chain) {
+    // chained magic tiles go off together, a beat apart, rather than one long queue
+    await Promise.all(chain.map(async (t, i) => {
+      await sleep(Math.min(i, 12) * 70);
       const at = this.find(t);
-      if (!at) continue;
+      if (!at) return;
       const kind = t.mg;
       this.say(MAGIC_NAME[kind] + '!', '#f8b0d4');
       this.ring(at, 40, '#f8b0d4');
       this.addScore(100 + 15 * depth, [at], '', false);
       await this.blastWith(c => magicFx(this, kind, at, c), this.magicCells(kind, at), depth + 1);
       await this.pop([at], at);
-    }
+    }));
   }
 
   // One magic tile goes off at `at`. colour: the tile it was swapped with (for the Saturn Orb).
@@ -771,6 +789,8 @@ export class Board {
       const a = Math.random() * Math.PI * 2, v = 0.6 + Math.random() * 1.6;
       this.particles.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.8, life: 1, c: color, s: Math.random() < 0.3 ? 2 : 1 });
     }
+    // keep giant chain reactions light on phones
+    if (this.particles.length > 500) this.particles.splice(0, this.particles.length - 500);
   }
 
   // Pixel-dissolve the board away (1) or back in (0) around a mini-game.

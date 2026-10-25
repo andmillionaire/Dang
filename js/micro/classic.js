@@ -96,13 +96,15 @@ export default [
       const ctx = scene(stage);
       const v = 38 * speed, n = speed > 1.5 ? 3 : 2;
       const s = expose({ hx: 22, jt: -1, v, barrels: Array.from({ length: n }, (_, i) => ({ x: 105 + i * v * 0.95, passed: false, rot: 0 })) });
-      const hy = () => (s.jt >= 0 ? Math.sin((Math.PI * s.jt) / 0.55) * 24 : 0);
+      // a long, floaty jump and a forgiving hitbox: about a third of a second to time it
+      const JUMP = 0.7;
+      const hy = () => (s.jt >= 0 ? Math.sin((Math.PI * s.jt) / JUMP) * 26 : 0);
       tapper(stage, () => { if (s.jt < 0) { s.jt = 0; sfx('swap'); } });
       frame(dt => {
-        if (s.jt >= 0 && (s.jt += dt) > 0.55) s.jt = -1;
+        if (s.jt >= 0 && (s.jt += dt) > JUMP) s.jt = -1;
         for (const b of s.barrels) {
           b.x -= v * dt; b.rot += dt * speed * 8;
-          if (!b.passed && Math.abs(b.x - s.hx) < 7 && hy() < 8) { sfx('nope'); return lose(); }
+          if (!b.passed && Math.abs(b.x - s.hx) < 5 && hy() < 6) { sfx('nope'); return lose(); }
           if (!b.passed && b.x < s.hx - 8) { b.passed = true; sfx('coin'); }
         }
         if (s.barrels.every(b => b.passed)) return win();
@@ -122,7 +124,7 @@ export default [
     async solve(b, s) {
       while (!b.over()) {
         const nb = s.barrels.find(x => !x.passed);
-        if (nb && s.jt < 0 && nb.x - s.hx > 0 && nb.x - s.hx <= s.v * 0.27) await b.tap({ x: 50, y: 50 });
+        if (nb && s.jt < 0 && nb.x - s.hx > 0 && nb.x - s.hx <= s.v * 0.35) await b.tap({ x: 50, y: 50 });
         await b.wait(8);
       }
     },
@@ -487,9 +489,9 @@ export default [
     id: 'cl-flap', cmd: 'Flap!', theme: 'classic', time: 6,
     setup({ stage, win, lose, sfx, speed, frame, expose }) {
       const ctx = scene(stage);
-      const gapH = speed > 1.6 ? 30 : 34;
-      const g1 = 35 + rnd(30);
-      const s = expose({ y: 50, vy: 0, bx: 28, pipes: [{ x: 75, gy: g1 }, { x: 125, gy: clamp(g1 + (rnd(50) - 25), 30, 70) }], gapH, flapT: 0 });
+      const gapH = speed > 1.6 ? 34 : 38;
+      const g1 = 38 + rnd(24);
+      const s = expose({ y: 50, vy: 0, bx: 28, pipes: [{ x: 75, gy: g1 }, { x: 125, gy: clamp(g1 + (rnd(30) - 15), 32, 68) }], gapH, flapT: 0 });
       tapper(stage, () => { s.vy = -55; s.flapT = 0.15; sfx('swap'); });
       frame(dt => {
         s.vy += 170 * dt; s.y += s.vy * dt; s.flapT -= dt;

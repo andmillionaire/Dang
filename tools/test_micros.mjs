@@ -1,5 +1,7 @@
 // Plays every microgame with its own solve() in a real browser to prove each one can be won.
-// Usage: node tools/test_micros.mjs [module ...] [--ids a,b] [--trials 3] [--shots dir]
+// Usage: node tools/test_micros.mjs [module ...] [--ids a,b] [--trials 3] [--shots dir] [--real | --touch] [--jitter ms]
+// --real drives the games with real browser mouse input (true hit-testing and pointer capture)
+// instead of events dispatched straight at elements; --touch does the same with a real touchscreen.
 // Needs the dev server on :8080 (node server/server.js) and Playwright.
 import { chromium } from 'playwright';
 const args = process.argv.slice(2);
@@ -8,11 +10,52 @@ const mods = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1]
 const ids = opt('--ids', '') ? opt('--ids').split(',') : null;
 const trials = +opt('--trials', 3);
 const shots = opt('--shots', '');
+const touchInput = args.includes('--touch');
+// --jitter ms: each press and release lands a random 0..ms late, like a human's timing. A game that
+// fails under ~120 ms of jitter asks for more precision than a person has.
+const jitter = +opt('--jitter', 0);
+const realInput = args.includes('--real') || touchInput;
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' })).newPage();
 const errs = [];
 p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
 p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+if (realInput) {
+  // input arrives in order from the page; play it back in that order
+  let chain = Promise.resolve(), touching = false;
+  const cdp = touchInput ? await p.context().newCDPSession(p) : null;
+  const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
+  let latestMove = null;
+  await p.exposeFunction('__realInputBinding', (type, x, y) => {
+    // like a real touchscreen, a burst of moves collapses to the newest one
+    if (type === 'pointermove') {
+      const queued = latestMove;
+      latestMove = { x, y };
+      if (queued) return chain;
+      chain = chain.then(async () => {
+        const m = latestMove; latestMove = null;
+        if (!m) return;
+        if (touchInput) { if (touching) await touch('touchMove', m.x, m.y); } else await p.mouse.move(m.x, m.y);
+      }).catch(() => {});
+      return chain;
+    }
+    chain = chain.then(async () => {
+      if (jitter && type !== 'pointermove') await new Promise(r => setTimeout(r, Math.random() * jitter));
+      if (touchInput) {
+        // a finger: moves only count while it's down
+        if (type === 'pointerdown') { touching = true; await touch('touchStart', x, y); }
+        else if (type === 'pointermove') { if (touching) await touch('touchMove', x, y); }
+        else if (type === 'pointerup') { if (touching) { touching = false; await touch('touchEnd', x, y); } }
+        return;
+      }
+      await p.mouse.move(x, y);
+      if (type === 'pointerdown') await p.mouse.down();
+      else if (type === 'pointerup') await p.mouse.up();
+    }).catch(() => {});
+    return chain;
+  });
+  await p.addInitScript(() => { globalThis.__realInput = (...a) => globalThis.__realInputBinding(...a); });
+}
 await p.goto('http://localhost:8080/?debug');
 await p.waitForTimeout(400);
 const list = await p.evaluate(async ({ mods, ids }) => {

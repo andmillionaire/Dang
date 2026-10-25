@@ -461,9 +461,12 @@ function rush(root, { difficulty: d, sfx, boost }, pool, title, tip, rounds) {
   })();
 }
 
-export function play(root, opts) {
+// Micro Rush draws from the whole arcade library (every theme, no bosses).
+export async function play(root, opts) {
   const d = opts.difficulty;
-  return rush(root, opts, MICROS, 'Micro Rush', 'Quick! A string of 5-second microgames. Read the command and do it before the fuse burns out.', 4 + Math.round(d * 2));
+  const { ALL } = await import('../micro/index.js');
+  const pool = ALL.filter(m => !m.boss);
+  return rush(root, opts, pool.length ? pool : MICROS, 'Micro Rush', 'Quick! A string of microgames from the whole arcade. Read the command and do it before the fuse burns out.', 4 + Math.round(d * 2));
 }
 
 // Word Search + Micro Rush: rapid-fire word microgames.

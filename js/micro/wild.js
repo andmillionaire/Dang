@@ -647,8 +647,8 @@ export default [
           if (m) { release(); await b.tap(s.P(m.x, m.y)); continue; }
         }
         if (s.ph === 3 && s.shield) {
-          if (!s.charging) { release(); hold(); await b.wait(20); continue; }
-          if (s.g >= s.lo + 0.03 && s.g <= s.hi - 0.04) { release(); await b.wait(30); continue; }
+          if (!s.charging) { release(); await b.wait(30); hold(); await b.until(() => s.charging || !s.shield, 400); continue; }
+          if (s.g >= s.lo + 0.03 && s.g <= s.hi - 0.04) { release(); await b.until(() => !s.charging, 400); continue; }
           b.move(s.P(spot(s.gx), 88));
           await b.wait(15);
           continue;

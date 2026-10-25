@@ -49,26 +49,48 @@ export const tapper = (el, fn) => { el.addEventListener('pointerdown', e => { e.
 const capture = (el, e) => { try { el.setPointerCapture(e.pointerId); } catch { /* synthetic or already released */ } };
 
 // Track a finger (or mouse) on the stage: cb(p, phase) with p in stage %; phase 'down' | 'move' | 'up'.
+// A fast swipe arrives as a few far-apart samples, so moves are filled in: the browser's coalesced
+// samples first, then small steps between them. Games that collect or wipe things by passing over
+// them never miss one because the finger moved quickly.
+const STEP = 4;
 export function follow(stage, pos, cb) {
-  let held = false;
-  stage.addEventListener('pointerdown', e => { held = true; capture(stage, e); cb(pos(e), 'down'); });
-  stage.addEventListener('pointermove', e => { if (held || e.pointerType === 'mouse') cb(pos(e), held ? 'move' : 'hover'); });
-  const up = e => { if (held) { held = false; cb(pos(e), 'up'); } };
+  let held = false, last = null;
+  stage.addEventListener('pointerdown', e => { held = true; capture(stage, e); last = pos(e); cb(last, 'down'); });
+  stage.addEventListener('pointermove', e => {
+    if (!held) { if (e.pointerType === 'mouse') cb(pos(e), 'hover'); return; }
+    const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+    for (const ev of evs) {
+      if (!held) return;
+      const p = pos(ev);
+      if (last) {
+        const n = Math.min(12, Math.ceil(dist(p, last) / STEP));
+        for (let k = 1; k < n && held; k++) cb({ x: last.x + (p.x - last.x) * k / n, y: last.y + (p.y - last.y) * k / n }, 'move');
+      }
+      if (held) cb(p, 'move');
+      last = p;
+    }
+  });
+  const up = e => { if (held) { held = false; last = null; cb(pos(e), 'up'); } };
   stage.addEventListener('pointerup', up);
   stage.addEventListener('pointercancel', up);
 }
 
 // Swipes on the stage: cb(dir, dx, dy) with dir 'left' | 'right' | 'up' | 'down' (dx, dy in stage %).
+// A swipe counts the moment the finger has travelled far enough, not when it lifts, so reflex
+// games (roll before the laser hits!) respond instantly.
 export function swipe(stage, pos, cb, min = 12) {
   let start = null;
-  stage.addEventListener('pointerdown', e => { start = pos(e); capture(stage, e); });
-  stage.addEventListener('pointerup', e => {
+  const check = (e, final) => {
     if (!start) return;
     const p = pos(e), dx = p.x - start.x, dy = p.y - start.y;
+    if (Math.hypot(dx, dy) < min) { if (final) start = null; return; }
     start = null;
-    if (Math.hypot(dx, dy) < min) return;
     cb(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'), dx, dy);
-  });
+  };
+  stage.addEventListener('pointerdown', e => { start = pos(e); capture(stage, e); });
+  stage.addEventListener('pointermove', e => check(e, false));
+  stage.addEventListener('pointerup', e => check(e, true));
+  stage.addEventListener('pointercancel', () => (start = null));
 }
 
 // Press-and-hold: onDown() when pressed, onUp(heldSeconds) when released.
@@ -130,6 +152,9 @@ export function runMicro(host, m, { sfx = () => {}, speed = 1, autoplay = false 
   // Faster speeds trim the fuse; bosses only half as much, since their phases need room.
   const time = Math.min(m.boss ? BOSS_MAX_TIME : MAX_TIME, (m.time || DEFAULT_TIME) / (1 + (speed - 1) * (m.boss ? 0.18 : 0.35)));
   const stage = h('div', { class: 'mc-stage mcs-' + m.id });
+  // pressing and moving on a sprite must never start the browser's own image drag (it cancels the
+  // pointer and the game stops hearing the finger), nor a text selection or a long-press menu
+  for (const ev of ['dragstart', 'selectstart', 'contextmenu']) stage.addEventListener(ev, e => e.preventDefault());
   const fuse = h('div', { class: 'mc-fuse' }, h('i'));
   const box = h('div', { class: 'mc-box' }, stage, h('div', { class: 'mc-cmd' }, m.cmd));
   const wrap = h('div', { class: 'mc' + (m.boss ? ' boss' : '') }, fuse, box);
@@ -194,13 +219,21 @@ export function bot(stage, isOver = () => false) {
     return { x: r.left + (p.x / 100) * r.width, y: r.top + (p.y / 100) * r.height };
   };
   let target = null;
+  // The test harness can supply real browser input (globalThis.__realInput), so taps and drags go
+  // through genuine hit-testing and pointer capture, exactly like a finger.
+  const real = globalThis.__realInput;
+  // with real input, a wait or check first lets the bot's own last touch land (like a person
+  // looking at what their tap did before acting again)
+  let landed = Promise.resolve();
   const fire = (type, p, el) => {
     const c = client(p);
+    if (real) { landed = Promise.resolve(real(type, c.x, c.y)).catch(() => {}); return null; }
     const t = el || (p instanceof Element ? p : document.elementFromPoint(c.x, c.y)) || stage;
     t.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: c.x, clientY: c.y, button: 0, buttons: type === 'pointerup' ? 0 : 1 }));
     return t;
   };
-  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const sleepMs = ms => new Promise(r => setTimeout(r, ms));
+  const wait = async ms => { await landed; await sleepMs(ms); };
   const B = {
     wait,
     over: isOver,
@@ -209,7 +242,7 @@ export function bot(stage, isOver = () => false) {
     down(p) { target = fire('pointerdown', p); },
     // moves go to the element that got the pointerdown, like pointer capture
     move(p) { fire('pointermove', p, target || undefined); },
-    up(p) { const t = fire('pointerup', p, target || undefined); target = null; t.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: client(p).x, clientY: client(p).y })); },
+    up(p) { const t = fire('pointerup', p, target || undefined); target = null; if (!t) return; t.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: client(p).x, clientY: client(p).y })); },
     async tap(p) { B.down(p); await wait(30); B.up(p); await wait(30); },
     async hold(p, ms) { B.down(p); await wait(ms); B.up(p); },
     async drag(a, b, ms = 250, steps = 10) {
@@ -224,8 +257,9 @@ export function bot(stage, isOver = () => false) {
     },
     // wait until fn() is truthy (or the game ends); returns its value
     async until(fn, ms = 15000) {
+      await landed;
       const t0 = performance.now();
-      for (;;) { const v = fn(); if (v || isOver() || performance.now() - t0 > ms) return v; await wait(16); }
+      for (;;) { const v = fn(); if (v || isOver() || performance.now() - t0 > ms) return v; await sleepMs(16); }
     },
     pct: centrePct,
   };
